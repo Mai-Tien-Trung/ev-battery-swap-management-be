@@ -70,7 +70,7 @@ public class AuthController {
 
         return ResponseEntity.ok().body(
                 java.util.Map.of(
-                        "message", "Login thành công",
+                        "message", "Login success",
                         "token", token,
                         "username", user.getUsername()
                 )
