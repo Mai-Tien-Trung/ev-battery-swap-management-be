@@ -1,4 +1,8 @@
 package com.evstation.batteryswap.repository;
 
-public interface BatteryRepository {
+import com.evstation.batteryswap.entity.Battery;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface BatteryRepository extends JpaRepository<Battery, Long> {
+    boolean existsBySerialNumber(String serialNumber);
 }
