@@ -5,6 +5,7 @@ import com.evstation.batteryswap.dto.response.SubscriptionPlanResponse;
 import com.evstation.batteryswap.entity.SubscriptionPlan;
 import com.evstation.batteryswap.repository.SubscriptionPlanRepository;
 import com.evstation.batteryswap.service.SubscriptionPlanService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,73 +14,69 @@ import java.util.stream.Collectors;
 @Service
 public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
-    private final SubscriptionPlanRepository planRepository;
-
-    public SubscriptionPlanServiceImpl(SubscriptionPlanRepository planRepository) {
-        this.planRepository = planRepository;
-    }
+    @Autowired
+    private SubscriptionPlanRepository subscriptionPlanRepository;
 
     private SubscriptionPlanResponse mapToResponse(SubscriptionPlan plan) {
-        return SubscriptionPlanResponse.builder()
-                .id(plan.getId())
-                .name(plan.getName())
-                .price(plan.getPrice())
-                .durationDays(plan.getDurationDays())
-                .swapLimit(plan.getSwapLimit())
-                .baseMileage(plan.getBaseMileage())
-                .status(plan.getStatus())
+        SubscriptionPlanResponse res = new SubscriptionPlanResponse();
+        res.setId(plan.getId());
+        res.setName(plan.getName());
+        res.setPrice(plan.getPrice());
+        res.setDurationDays(plan.getDurationDays());
+        res.setMaxBatteries(plan.getMaxBatteries());
+        res.setBaseMileage(plan.getBaseMileage());
+        res.setStatus(plan.getStatus());
+        return res;
+    }
+
+    private SubscriptionPlan mapToEntity(SubscriptionPlanRequest request) {
+        return SubscriptionPlan.builder()
+                .name(request.getName())
+                .price(request.getPrice())
+                .durationDays(request.getDurationDays())
+                .maxBatteries(request.getMaxBatteries())
+                .baseMileage(request.getBaseMileage())
+                .status(request.getStatus())
                 .build();
     }
 
     @Override
+    public SubscriptionPlanResponse create(SubscriptionPlanRequest request) {
+        SubscriptionPlan plan = mapToEntity(request);
+        return mapToResponse(subscriptionPlanRepository.save(plan));
+    }
+
+    @Override
     public List<SubscriptionPlanResponse> getAll() {
-        return planRepository.findAll()
+        return subscriptionPlanRepository.findAll()
                 .stream().map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
     public SubscriptionPlanResponse getById(Long id) {
-        SubscriptionPlan plan = planRepository.findById(id)
+        SubscriptionPlan plan = subscriptionPlanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Subscription plan not found"));
         return mapToResponse(plan);
     }
 
     @Override
-    public SubscriptionPlanResponse create(SubscriptionPlanRequest request) {
-        if (planRepository.existsByName(request.getName())) {
-            throw new RuntimeException("Tên gói đã tồn tại");
-        }
-
-        SubscriptionPlan plan = SubscriptionPlan.builder()
-                .name(request.getName())
-                .price(request.getPrice())
-                .durationDays(request.getDurationDays())
-                .swapLimit(request.getSwapLimit())
-                .baseMileage(request.getBaseMileage())
-                .status(request.getStatus())
-                .build();
-
-        return mapToResponse(planRepository.save(plan));
-    }
-
-    @Override
     public SubscriptionPlanResponse update(Long id, SubscriptionPlanRequest request) {
-        SubscriptionPlan plan = planRepository.findById(id)
+        SubscriptionPlan plan = subscriptionPlanRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Subscription plan not found"));
 
         plan.setName(request.getName());
         plan.setPrice(request.getPrice());
         plan.setDurationDays(request.getDurationDays());
-        plan.setSwapLimit(request.getSwapLimit());
+        plan.setMaxBatteries(request.getMaxBatteries());
         plan.setBaseMileage(request.getBaseMileage());
         plan.setStatus(request.getStatus());
 
-        return mapToResponse(planRepository.save(plan));
+        return mapToResponse(subscriptionPlanRepository.save(plan));
     }
 
     @Override
     public void delete(Long id) {
-        planRepository.deleteById(id);
+        subscriptionPlanRepository.deleteById(id);
     }
 }

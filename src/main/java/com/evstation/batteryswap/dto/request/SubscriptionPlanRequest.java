@@ -1,31 +1,31 @@
 package com.evstation.batteryswap.dto.request;
 
 import com.evstation.batteryswap.enums.PlanStatus;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Data
 public class SubscriptionPlanRequest {
-
-    @NotBlank(message = "Tên gói không được để trống")
+    @NotBlank(message = "Name cannot be blank")
     private String name;
 
-    @Positive(message = "Giá phải lớn hơn 0")
-    private double price;
+    @NotNull(message = "Price cannot be null")
+    @Min(value = 0, message = "Price must be >= 0")
+    private Double price;
 
-    @Min(value = 1, message = "Thời hạn tối thiểu là 1 ngày")
-    private int durationDays;
+    @NotNull(message = "Duration cannot be null")
+    @Min(value = 1, message = "Duration must be at least 1 day")
+    private Integer durationDays;
 
-    @Min(value = 1, message = "Số lần swap tối thiểu là 1")
-    private int swapLimit;
+    @NotNull(message = "Max batteries cannot be null")
+    @Min(value = 1, message = "Max batteries must be at least 1")
+    private Integer maxBatteries;
 
-    @Positive(message = "Quãng đường cơ bản phải lớn hơn 0")
-    private double baseMileage;
+    @NotNull(message = "Base mileage cannot be null")
+    @Min(value = 0, message = "Base mileage must be at least 0")
+    private Double baseMileage;
 
-    @NotNull(message = "Trạng thái không được để trống")
-    private PlanStatus status;
+    private PlanStatus status = PlanStatus.ACTIVE;
 }

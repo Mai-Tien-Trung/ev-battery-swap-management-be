@@ -1,19 +1,15 @@
 package com.evstation.batteryswap.dto.response;
 
 import com.evstation.batteryswap.enums.PlanStatus;
-import lombok.*;
+import lombok.Data;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+@Data
 public class SubscriptionPlanResponse {
     private Long id;
     private String name;
-    private double price;
-    private int durationDays;
-    private int swapLimit;
-    private double baseMileage;
+    private Double price;
+    private Integer durationDays;
+    private Integer maxBatteries;
+    private Double baseMileage;
     private PlanStatus status;
 }

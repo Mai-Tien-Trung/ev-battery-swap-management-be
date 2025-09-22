@@ -18,17 +18,16 @@ public class SubscriptionPlan {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String name; // ví dụ: Gói 2 Pin, Gói 3 Pin
+    private String name;
 
     @Column(nullable = false)
     private double price;
 
     @Column(nullable = false)
-    private int durationDays; // thời hạn gói (ngày)
+    private int durationDays;
 
     @Column(nullable = false)
-    private int swapLimit; // số lần đổi pin tối đa
-
+    private Integer maxBatteries;
     @Column(nullable = false)
     private double baseMileage; // km cơ bản đi được
 
