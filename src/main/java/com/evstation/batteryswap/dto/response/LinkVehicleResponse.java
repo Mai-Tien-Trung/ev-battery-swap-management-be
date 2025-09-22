@@ -7,6 +7,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class LinkVehicleResponse {
     private String message;
-    private VehicleResponse vehicle;
+    private VehicleSummaryResponse vehicle;
     private SubscriptionResponse subscription;
 }

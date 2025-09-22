@@ -3,6 +3,9 @@ package com.evstation.batteryswap.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "vehicles")
 @Data
@@ -27,8 +30,11 @@ public class Vehicle {
     private String trunkCapacity;
     private Double weightWithoutBattery;
     private Double weightWithBattery;
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = true) // nullable = true vì lúc mới tạo có thể chưa gán user
-    private User user;
+    @ManyToMany(mappedBy = "vehicles")
+    private List<User> users = new ArrayList<>();
+
+    // Xe có thể có nhiều subscription
+    @OneToMany(mappedBy = "vehicle", cascade = CascadeType.ALL)
+    private List<Subscription> subscriptions = new ArrayList<>();
 }
 
