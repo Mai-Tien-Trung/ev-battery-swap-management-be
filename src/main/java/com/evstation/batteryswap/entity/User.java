@@ -28,6 +28,12 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_vehicle",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "vehicle_id")
+    )
     private List<Vehicle> vehicles = new ArrayList<>();
 }
