@@ -1,20 +1,12 @@
-package com.evstation.batteryswap.entity;
+package com.evstation.batteryswap.dto.response;
 
-import jakarta.persistence.*;
+
 import lombok.Data;
 
-@Entity
-@Table(name = "vehicles")
 @Data
-public class Vehicle {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class VehicleResponse {
     private Long id;
-
-    @Column(nullable = false, unique = true)
     private String vin;
-
-    @Column(nullable = false)
     private String model;
     private String wheelbase;
     private String groundClearance;
@@ -27,8 +19,4 @@ public class Vehicle {
     private String trunkCapacity;
     private Double weightWithoutBattery;
     private Double weightWithBattery;
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = true) // nullable = true vì lúc mới tạo có thể chưa gán user
-    private User user;
 }
-
