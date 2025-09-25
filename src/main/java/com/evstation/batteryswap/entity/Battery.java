@@ -29,6 +29,6 @@ public class Battery {
 
     // FK: Pin hiện đang ở trạm nào
     @ManyToOne
-    @JoinColumn(name = "station_id", nullable = false)
+    @JoinColumn(name = "station_id", nullable = true)
     private Station station;
 }
