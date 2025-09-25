@@ -15,5 +15,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     boolean existsByUserIdAndVehicleIdAndStatus(Long userId, Long vehicleId, SubscriptionStatus status);
     Optional<Subscription> findByUserIdAndVehicleIdAndStatus(Long userId, Long vehicleId, SubscriptionStatus status);
     List<Subscription> findByEndDate(LocalDate endDate);
+    List<Subscription> findByStatusAndEndDate(SubscriptionStatus status, LocalDate endDate);
+
 
 }
