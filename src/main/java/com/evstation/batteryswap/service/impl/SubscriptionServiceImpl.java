@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class SubscriptionServiceImpl implements SubscriptionService {
@@ -62,5 +64,34 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         newSub.setStartDate(LocalDate.now());
 
         return subscriptionRepository.save(newSub);
+    }
+    @Override
+    @Transactional
+    public void autoRenewSubscriptions() {
+        LocalDate today = LocalDate.now();
+        List<Subscription> expiredSubs = subscriptionRepository.findByEndDate(today);
+
+        for (Subscription sub : expiredSubs) {
+            // 1. đóng gói cũ
+            sub.setStatus(SubscriptionStatus.COMPLETED);
+            subscriptionRepository.save(sub);
+
+            // 2. chọn gói mới (nextPlanId hoặc giữ nguyên)
+            Long planId = (sub.getNextPlanId() != null) ? sub.getNextPlanId() : sub.getPlan().getId();
+            SubscriptionPlan plan = subscriptionPlanRepository.findById(planId)
+                    .orElseThrow(() -> new RuntimeException("Plan không tồn tại"));
+
+            // 3. tạo subscription mới
+            Subscription newSub = new Subscription();
+            newSub.setUser(sub.getUser());
+            newSub.setVehicle(sub.getVehicle());
+            newSub.setPlan(plan);
+            newSub.setStatus(SubscriptionStatus.ACTIVE);
+            newSub.setStartDate(today.plusDays(1));
+            newSub.setEndDate(today.plusDays(plan.getDurationDays()));
+            newSub.setNextPlanId(null); // reset vì đã đổi gói
+
+            subscriptionRepository.save(newSub);
+        }
     }
 }

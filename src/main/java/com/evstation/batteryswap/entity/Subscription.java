@@ -29,6 +29,9 @@ public class Subscription {
     @Enumerated(EnumType.STRING)
     private SubscriptionStatus status;
 
+    @Column(name = "next_plan_id")
+    private Long nextPlanId;
     private LocalDate startDate;
     private LocalDate endDate;
+
 }

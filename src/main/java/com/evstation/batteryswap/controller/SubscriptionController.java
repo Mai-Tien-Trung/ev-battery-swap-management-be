@@ -10,7 +10,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-
 @RestController
 @RequestMapping("/api/user/subscriptions")
 @RequiredArgsConstructor
@@ -18,13 +17,14 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
 
+    // User yêu cầu đổi gói (không đổi ngay, chỉ set nextPlanId)
     @PutMapping("/{vehicleId}/change-plan")
-    public ResponseEntity<?> changePlan(
+    public ResponseEntity<?> requestChangePlan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long vehicleId,
             @RequestBody ChangePlanRequest request
     ) {
-        Subscription newSub = subscriptionService.changePlan(
+        Subscription updatedSub = subscriptionService.changePlan(
                 userDetails.getId(),
                 vehicleId,
                 request.getNewPlanId()
@@ -32,12 +32,13 @@ public class SubscriptionController {
 
         return ResponseEntity.ok(
                 Map.of(
-                        "message", "Subscription changed successfully",
-                        "newSubscription", Map.of(
-                                "id", newSub.getId(),
-                                "planName", newSub.getPlan().getName(),
-                                "status", newSub.getStatus(),
-                                "startDate", newSub.getStartDate()
+                        "message", "Change plan request saved. New plan will apply after current subscription ends.",
+                        "subscription", Map.of(
+                                "id", updatedSub.getId(),
+                                "currentPlan", updatedSub.getPlan().getName(),
+                                "nextPlanId", updatedSub.getNextPlanId(),
+                                "status", updatedSub.getStatus(),
+                                "endDate", updatedSub.getEndDate()
                         )
                 )
         );
