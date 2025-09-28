@@ -1,80 +1,52 @@
 package com.evstation.batteryswap.controller;
 
-
-
-
 import com.evstation.batteryswap.dto.request.LoginRequest;
 import com.evstation.batteryswap.dto.request.RegisterRequest;
-import com.evstation.batteryswap.entity.User;
-import com.evstation.batteryswap.enums.Role;
-import com.evstation.batteryswap.repository.UserRepository;
-import com.evstation.batteryswap.security.JwtService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import com.evstation.batteryswap.dto.response.AuthResponse;
+import com.evstation.batteryswap.dto.response.UserInfoResponse;
+import com.evstation.batteryswap.security.CustomUserDetails;
+import com.evstation.batteryswap.service.AuthService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@RequiredArgsConstructor
-@CrossOrigin(origins = "*")
-
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
+    @Autowired
+    private AuthService authService;
 
     // ✅ Đăng ký
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("Username đã tồn tại");
-        }
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body("Email đã tồn tại");
-        }
-
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.USER);
-
-        userRepository.save(user);
-
-        String token = jwtService.generateToken(user);
-        return ResponseEntity.ok().body(
-                java.util.Map.of(
-                        "message", "Register thành công",
-                        "token", token,
-                        "username", user.getUsername(),
-                        "role", user.getRole().name()
-                )
-        );
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(authService.register(request));
     }
 
+    // ✅ Đăng nhập
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
+    }
 
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+    // ✅ Lấy thông tin user hiện tại
+    @GetMapping("/me")
+    public ResponseEntity<UserInfoResponse> getUserInfo(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long userId = userDetails.getId();
+        return ResponseEntity.ok(authService.getUserInfo(userId));
+    }
 
-        String token = jwtService.generateToken(user);
-
-        return ResponseEntity.ok().body(
-                java.util.Map.of(
-                        "message", "Login success",
-                        "token", token,
-                        "username", user.getUsername()
-                )
-        );
+    // ✅ Cập nhật thông tin user (phone, address)
+    @PutMapping("/me")
+    public ResponseEntity<UserInfoResponse> updateUserInfo(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody Map<String, String> updates) {
+        Long userId = userDetails.getId();
+        return ResponseEntity.ok(authService.updateUserInfo(userId, updates));
     }
 }

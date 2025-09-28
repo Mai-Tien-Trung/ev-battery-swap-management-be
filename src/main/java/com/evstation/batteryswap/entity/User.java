@@ -36,4 +36,6 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "vehicle_id")
     )
     private List<Vehicle> vehicles = new ArrayList<>();
+    private String phone;
+    private String address;
 }

@@ -1,6 +1,5 @@
 package com.evstation.batteryswap.dto.response;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,9 +7,9 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthResponse {
-    private String message;
-    private String token;
+public class UserInfoResponse {
     private String username;
-    private String role;
+    private String email;
+    private String phone;   // có thể null
+    private String address; // có thể null
 }
