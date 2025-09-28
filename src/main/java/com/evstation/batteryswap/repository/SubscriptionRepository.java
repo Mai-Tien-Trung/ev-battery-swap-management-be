@@ -16,6 +16,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Optional<Subscription> findByUserIdAndVehicleIdAndStatus(Long userId, Long vehicleId, SubscriptionStatus status);
     List<Subscription> findByEndDate(LocalDate endDate);
     List<Subscription> findByStatusAndEndDate(SubscriptionStatus status, LocalDate endDate);
+    List<Subscription> findByUserIdAndStatus(Long userId, SubscriptionStatus status); // ✅ thêm dòng này
 
 
 }

@@ -1,8 +1,10 @@
 package com.evstation.batteryswap.service.impl;
 
+import com.evstation.batteryswap.dto.response.SubscriptionDetailResponse;
 import com.evstation.batteryswap.entity.Subscription;
 import com.evstation.batteryswap.entity.SubscriptionPlan;
 
+import com.evstation.batteryswap.entity.Vehicle;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.repository.SubscriptionPlanRepository;
 import com.evstation.batteryswap.repository.SubscriptionRepository;
@@ -75,5 +77,50 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
             subscriptionRepository.save(newSub);
         }
+
     }
+    @Override
+    public SubscriptionDetailResponse getSubscriptionDetail(Long userId, Long vehicleId) {
+        Subscription sub = subscriptionRepository
+                .findByUserIdAndVehicleIdAndStatus(userId, vehicleId, SubscriptionStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException("No active subscription found"));
+
+        Vehicle vehicle = sub.getVehicle();
+
+        SubscriptionPlan currentPlan = sub.getPlan();
+        SubscriptionPlan nextPlan = sub.getNextPlanId() != null
+                ? subscriptionPlanRepository.findById(sub.getNextPlanId())
+                .orElseThrow(() -> new RuntimeException("Next plan not found"))
+                : currentPlan;
+
+        return new SubscriptionDetailResponse(
+                vehicle.getModel() + " " + vehicle.getVin(),
+                currentPlan.getName(),
+                sub.getStartDate(),
+                sub.getEndDate(),
+                nextPlan.getName()
+        );
+    }
+    @Override
+    public List<SubscriptionDetailResponse> getAllActiveSubscriptions(Long userId) {
+        List<Subscription> subs = subscriptionRepository.findByUserIdAndStatus(userId, SubscriptionStatus.ACTIVE);
+
+        return subs.stream().map(sub -> {
+            Vehicle vehicle = sub.getVehicle();
+            SubscriptionPlan currentPlan = sub.getPlan();
+            SubscriptionPlan nextPlan = sub.getNextPlanId() != null
+                    ? subscriptionPlanRepository.findById(sub.getNextPlanId())
+                    .orElseThrow(() -> new RuntimeException("Next plan not found"))
+                    : currentPlan;
+
+            return new SubscriptionDetailResponse(
+                    vehicle.getModel() + " " + vehicle.getVin(),
+                    currentPlan.getName(),
+                    sub.getStartDate(),
+                    sub.getEndDate(),
+                    nextPlan.getName()
+            );
+        }).toList();
+    }
+
 }
