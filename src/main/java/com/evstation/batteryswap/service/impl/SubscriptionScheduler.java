@@ -12,7 +12,7 @@ public class SubscriptionScheduler {
     private final SubscriptionService subscriptionService;
 
     // chạy mỗi ngày lúc 0h00
-    @Scheduled(cron = "0 0 0 * * ?")
+    @Scheduled(cron = "0 * * * * ?")
     public void runAutoRenewJob() {
         subscriptionService.autoRenewSubscriptions();
     }

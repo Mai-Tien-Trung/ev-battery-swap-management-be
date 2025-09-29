@@ -46,13 +46,11 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
                 .orElseThrow(() -> new RuntimeException("Subscription plan not found"));
 
-        // Thêm vehicle vào garage của user (user_vehicle)
         if (!user.getVehicles().contains(vehicle)) {
             user.getVehicles().add(vehicle);
             userRepository.save(user);
         }
 
-        // Kiểm tra đã có subscription active cho xe này chưa
         boolean hasActiveSub = subscriptionRepository
                 .existsByUserIdAndVehicleIdAndStatus(userId, vehicle.getId(), SubscriptionStatus.ACTIVE);
         if (hasActiveSub) {
@@ -69,19 +67,19 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
         subscription.setEndDate(LocalDate.now().plusDays(plan.getDurationDays()));
         subscriptionRepository.save(subscription);
 
-        // 👉 Sinh pin ban đầu theo số lượng trong gói
+        //  Sinh pin ban đầu theo số lượng trong gói
         List<Battery> batteries = new ArrayList<>();
         for (int i = 0; i < plan.getMaxBatteries(); i++) {
             Battery battery = new Battery();
             battery.setSerialNumber("BAT-" + UUID.randomUUID());
             battery.setSwapCount(0);
             battery.setStatus(BatteryStatus.IN_USE);
-            battery.setStation(null); // đang gắn cho user, không ở station
+            battery.setStation(null);
             batteries.add(battery);
         }
         batteryRepository.saveAll(batteries);
 
-        // 👉 Log phát pin ban đầu
+        // Log phát pin ban đầu
         List<SwapTransaction> logs = new ArrayList<>();
         for (Battery b : batteries) {
             SwapTransaction log = new SwapTransaction();
@@ -89,7 +87,7 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
             log.setVehicle(vehicle);
             log.setOldBattery(null); // dealer cấp pin mới
             log.setNewBattery(b);
-            log.setStation(null); // không phát tại station
+            log.setStation(null);
             log.setTimestamp(LocalDateTime.now());
             logs.add(log);
         }
