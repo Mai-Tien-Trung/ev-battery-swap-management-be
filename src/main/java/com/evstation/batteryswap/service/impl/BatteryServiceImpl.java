@@ -30,8 +30,8 @@ public class BatteryServiceImpl implements BatteryService {
                 .serialNumber(battery.getSerialNumber())
                 .status(battery.getStatus())
                 .swapCount(battery.getSwapCount())
-                .stationId(battery.getStation().getId())
-                .stationName(battery.getStation().getName())
+                .stationId(battery.getStation() != null ? battery.getStation().getId() : null)
+                .stationName(battery.getStation() != null ? battery.getStation().getName() : null)
                 .build();
     }
 
