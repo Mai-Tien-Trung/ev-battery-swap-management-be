@@ -12,7 +12,6 @@ public class BatteryResponse {
     private Long id;
     private String serialNumber;
     private BatteryStatus status;
-    private int swapCount;
     private Long stationId;
     private String stationName;
 }
