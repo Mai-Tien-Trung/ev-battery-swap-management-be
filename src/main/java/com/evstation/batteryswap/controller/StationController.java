@@ -46,4 +46,10 @@ public class StationController {
         stationService.delete(id);
         return ResponseEntity.noContent().build();
     }
+    @GetMapping("/{id}/usage")
+    public ResponseEntity<String> checkUsage(@PathVariable Long id) {
+        stationService.updateStationUsage(id);
+        return ResponseEntity.ok("Updated station usage successfully!");
+    }
+
 }

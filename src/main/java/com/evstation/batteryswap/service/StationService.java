@@ -13,4 +13,5 @@ public interface StationService {
     StationResponse create(StationRequest request);
     StationResponse update(Long id, StationRequest request);
     void delete(Long id);
+    void updateStationUsage(Long stationId);
 }
