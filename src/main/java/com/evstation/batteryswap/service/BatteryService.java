@@ -1,14 +1,18 @@
 package com.evstation.batteryswap.service;
 
-import com.evstation.batteryswap.dto.request.BatteryRequest;
-import com.evstation.batteryswap.dto.response.BatteryResponse;
+import com.evstation.batteryswap.entity.Battery;
 
 import java.util.List;
 
 public interface BatteryService {
-    List<BatteryResponse> getAll();
-    BatteryResponse getById(Long id);
-    BatteryResponse create(BatteryRequest request);
-    BatteryResponse update(Long id, BatteryRequest request);
+
+    List<Battery> getAll();
+
+    Battery getById(Long id);
+
+    Battery create(Battery battery);
+
+    Battery update(Long id, Battery battery);
+
     void delete(Long id);
 }

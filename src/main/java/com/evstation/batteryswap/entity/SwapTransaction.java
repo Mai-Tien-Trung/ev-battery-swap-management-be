@@ -1,41 +1,48 @@
 package com.evstation.batteryswap.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import lombok.*;
 import java.time.LocalDateTime;
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
+
 @Entity
-@Table(name = "swap_transaction")
+@Table(name = "swap_transactions")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class SwapTransaction {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    // Người dùng thực hiện swap
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "vehicle_id")
+    // Xe đang gắn pin
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
 
-    @ManyToOne
-    @JoinColumn(name = "old_battery_id")
-    private Battery oldBattery;
+    // Pin thật được sử dụng trong giao dịch
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "battery_serial_id", nullable = false)
+    private BatterySerial batterySerial;
 
-    @ManyToOne
-    @JoinColumn(name = "new_battery_id")
-    private Battery newBattery;
-
-    @ManyToOne
+    // Trạm diễn ra swap (có thể null nếu là phát pin ban đầu)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id")
     private Station station;
 
-    private LocalDateTime timestamp;
-}
+    // Thời điểm thực hiện
+    private LocalDateTime timestamp = LocalDateTime.now();
 
+    // ⚡️ Các trường phục vụ tính hao mòn pin
+    private Double startPercent;       // phần trăm lúc nhận pin (VD: 100%)
+    private Double endPercent;         // phần trăm lúc trả pin (VD: 20%)
+    private Double depthOfDischarge;   // DoD = start - end
+    private Double degradationThisSwap; // mức hao mòn % trong giao dịch này
+}

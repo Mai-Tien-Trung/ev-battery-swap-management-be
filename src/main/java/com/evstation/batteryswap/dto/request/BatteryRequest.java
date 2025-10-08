@@ -17,9 +17,9 @@ public class BatteryRequest {
     @NotNull(message = "Trạng thái pin không được để trống")
     private BatteryStatus status;
 
-    @Min(value = 0, message = "Số lần swap không thể âm")
-    private int swapCount;
-
     @NotNull(message = "Station ID không được để trống")
     private Long stationId;
+
+    @NotNull(message = "Battery ID (loại pin) không được để trống")
+    private Long batteryId;
 }

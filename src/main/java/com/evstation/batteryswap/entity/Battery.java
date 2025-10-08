@@ -1,8 +1,11 @@
 package com.evstation.batteryswap.entity;
 
-import com.evstation.batteryswap.enums.BatteryStatus;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "batteries")
@@ -18,17 +21,14 @@ public class Battery {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String serialNumber; // mã pin duy nhất
+    private String name; // Ví dụ: Lithium 72V - 40Ah
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private BatteryStatus status = BatteryStatus.AVAILABLE;
+    private String type; // xe máy / xe tải / xe đạp điện
+    private Double designCapacity; // Wh hoặc mAh
+    private String description;
 
-    @Column(nullable = false)
-    private int swapCount = 0; // số lần đã đổi
+    @OneToMany(mappedBy = "battery", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<BatterySerial> serials = new ArrayList<>();
 
-    // FK: Pin hiện đang ở trạm nào
-    @ManyToOne
-    @JoinColumn(name = "station_id", nullable = true)
-    private Station station;
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

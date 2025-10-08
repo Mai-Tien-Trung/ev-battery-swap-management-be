@@ -33,10 +33,14 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
     private BatteryRepository batteryRepository;
 
     @Autowired
+    private BatterySerialRepository batterySerialRepository;
+
+    @Autowired
     private SwapTransactionRepository swapTransactionRepository;
 
     @Override
     public LinkVehicleResponse linkVehicle(Long userId, LinkVehicleRequest request) {
+        // 1️⃣ Lấy dữ liệu người dùng và xe
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -46,20 +50,20 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
         SubscriptionPlan plan = subscriptionPlanRepository.findById(request.getSubscriptionPlanId())
                 .orElseThrow(() -> new RuntimeException("Subscription plan not found"));
 
-        // Thêm vehicle vào garage của user (user_vehicle)
+        // 2️⃣ Gán vehicle cho user (nếu chưa có)
         if (!user.getVehicles().contains(vehicle)) {
             user.getVehicles().add(vehicle);
             userRepository.save(user);
         }
 
-        // Kiểm tra đã có subscription active cho xe này chưa
+        // 3️⃣ Kiểm tra subscription đang hoạt động
         boolean hasActiveSub = subscriptionRepository
                 .existsByUserIdAndVehicleIdAndStatus(userId, vehicle.getId(), SubscriptionStatus.ACTIVE);
         if (hasActiveSub) {
             throw new RuntimeException("User already has an active subscription for this vehicle");
         }
 
-        // Tạo subscription mới
+        // 4️⃣ Tạo subscription mới
         Subscription subscription = new Subscription();
         subscription.setUser(user);
         subscription.setVehicle(vehicle);
@@ -69,35 +73,52 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
         subscription.setEndDate(LocalDate.now().plusDays(plan.getDurationDays()));
         subscriptionRepository.save(subscription);
 
-        // 👉 Sinh pin ban đầu theo số lượng trong gói
-        List<Battery> batteries = new ArrayList<>();
-        for (int i = 0; i < plan.getMaxBatteries(); i++) {
-            Battery battery = new Battery();
-            battery.setSerialNumber("BAT-" + UUID.randomUUID());
-            battery.setSwapCount(0);
-            battery.setStatus(BatteryStatus.IN_USE);
-            battery.setStation(null); // đang gắn cho user, không ở station
-            batteries.add(battery);
-        }
-        batteryRepository.saveAll(batteries);
+        // 5️⃣ Sinh pin thật dựa trên số lượng trong gói
+        List<BatterySerial> batterySerials = new ArrayList<>();
 
-        // 👉 Log phát pin ban đầu
+        // Lấy model pin mặc định (ví dụ id = 1)
+        Battery batteryModel = batteryRepository.findById(1L)
+                .orElseThrow(() -> new RuntimeException("Battery model not found"));
+
+        for (int i = 0; i < plan.getMaxBatteries(); i++) {
+            BatterySerial serial = new BatterySerial();
+            serial.setSerialNumber("BAT-" + UUID.randomUUID());
+            serial.setSwapCount(0);
+            serial.setStatus(BatteryStatus.IN_USE);
+            serial.setStation(null); // đang gắn cho user
+            serial.setBattery(batteryModel);
+            serial.setInitialCapacity(batteryModel.getDesignCapacity());
+            serial.setCurrentCapacity(batteryModel.getDesignCapacity());
+            serial.setStateOfHealth(100.0);
+            batterySerials.add(serial);
+        }
+        batterySerialRepository.saveAll(batterySerials);
+
+        // 6️⃣ Ghi log phát pin ban đầu (có cả thông tin hao mòn mặc định)
         List<SwapTransaction> logs = new ArrayList<>();
-        for (Battery b : batteries) {
+        for (BatterySerial b : batterySerials) {
             SwapTransaction log = new SwapTransaction();
             log.setUser(user);
             log.setVehicle(vehicle);
-            log.setOldBattery(null); // dealer cấp pin mới
-            log.setNewBattery(b);
-            log.setStation(null); // không phát tại station
+            log.setBatterySerial(b); // ⚡ GẮN PIN THẬT VÀO LOG
+            log.setStation(null);    // phát lúc đăng ký, chưa ở trạm
             log.setTimestamp(LocalDateTime.now());
+
+            // Mặc định khi phát pin lần đầu
+            log.setStartPercent(100.0);
+            log.setEndPercent(100.0);
+            log.setDepthOfDischarge(0.0);
+            log.setDegradationThisSwap(0.0);
+
             logs.add(log);
         }
         swapTransactionRepository.saveAll(logs);
 
-        // Map response
+        // 7️⃣ Chuẩn bị response
         VehicleSummaryResponse vehicleRes = new VehicleSummaryResponse(
-                vehicle.getId(), vehicle.getVin(), vehicle.getModel()
+                vehicle.getId(),
+                vehicle.getVin(),
+                vehicle.getModel()
         );
 
         SubscriptionResponse subRes = new SubscriptionResponse(
@@ -108,7 +129,7 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
                 subscription.getEndDate()
         );
 
-        List<BatterySummaryResponse> batteryRes = batteries.stream()
+        List<BatterySummaryResponse> batteryRes = batterySerials.stream()
                 .map(b -> new BatterySummaryResponse(
                         b.getId(),
                         b.getSerialNumber(),
@@ -117,7 +138,8 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
                 .toList();
 
         return new LinkVehicleResponse(
-                "Vehicle linked and subscription created successfully. Initial batteries assigned.",
+                "Vehicle linked and subscription created successfully. " +
+                        plan.getMaxBatteries() + " new batteries assigned.",
                 vehicleRes,
                 subRes,
                 batteryRes

@@ -1,9 +1,7 @@
 package com.evstation.batteryswap.controller;
 
-import com.evstation.batteryswap.dto.request.BatteryRequest;
-import com.evstation.batteryswap.dto.response.BatteryResponse;
+import com.evstation.batteryswap.entity.Battery;
 import com.evstation.batteryswap.service.BatteryService;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,29 +18,27 @@ public class BatteryController {
     }
 
     @GetMapping
-    public ResponseEntity<List<BatteryResponse>> getAllBatteries() {
+    public ResponseEntity<List<Battery>> getAll() {
         return ResponseEntity.ok(batteryService.getAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BatteryResponse> getBatteryById(@PathVariable Long id) {
+    public ResponseEntity<Battery> getById(@PathVariable Long id) {
         return ResponseEntity.ok(batteryService.getById(id));
     }
 
     @PostMapping
-    public ResponseEntity<BatteryResponse> createBattery(@Valid @RequestBody BatteryRequest request) {
-        return ResponseEntity.ok(batteryService.create(request));
+    public ResponseEntity<Battery> create(@RequestBody Battery battery) {
+        return ResponseEntity.ok(batteryService.create(battery));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BatteryResponse> updateBattery(
-            @PathVariable Long id,
-            @Valid @RequestBody BatteryRequest request) {
-        return ResponseEntity.ok(batteryService.update(id, request));
+    public ResponseEntity<Battery> update(@PathVariable Long id, @RequestBody Battery battery) {
+        return ResponseEntity.ok(batteryService.update(id, battery));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBattery(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         batteryService.delete(id);
         return ResponseEntity.noContent().build();
     }
