@@ -30,6 +30,8 @@ public class StationServiceImpl implements StationService {
                 .status(station.getStatus())
                 .capacity(station.getCapacity())
                 .phone(station.getPhone())
+                .latitude(station.getLatitude())
+                .longitude(station.getLongitude())
                 .build();
     }
 
@@ -59,6 +61,8 @@ public class StationServiceImpl implements StationService {
                 .status(request.getStatus() != null ? request.getStatus() : StationStatus.ACTIVE)
                 .capacity(request.getCapacity())
                 .phone(request.getPhone())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
                 .build();
 
         return mapToResponse(stationRepository.save(station));
@@ -74,6 +78,8 @@ public class StationServiceImpl implements StationService {
         station.setStatus(request.getStatus());
         station.setCapacity(request.getCapacity());
         station.setPhone(request.getPhone());
+        station.setLatitude(request.getLatitude());
+        station.setLongitude(request.getLongitude());
 
         return mapToResponse(stationRepository.save(station));
     }
