@@ -2,6 +2,7 @@ package com.evstation.batteryswap.service.impl;
 
 import com.evstation.batteryswap.dto.request.StationRequest;
 import com.evstation.batteryswap.dto.response.StationResponse;
+import com.evstation.batteryswap.dto.response.StationSummaryResponse;
 import com.evstation.batteryswap.entity.Station;
 import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.StationStatus;
@@ -109,5 +110,35 @@ public class StationServiceImpl implements StationService {
         }
 
         stationRepository.save(station);
+    }
+    @Override
+    public StationSummaryResponse getStationSummary(Long id) {
+        Station station = stationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Station not found"));
+
+        return buildSummary(station);
+    }
+
+    @Override
+    public List<StationSummaryResponse> getAllStationSummaries() {
+        return stationRepository.findAll().stream()
+                .map(this::buildSummary)
+                .collect(Collectors.toList());
+    }
+
+    private StationSummaryResponse buildSummary(Station station) {
+        long total = batterySerialRepository.countByStationId(station.getId());
+        long maintenance = batterySerialRepository.countByStationIdAndStatus(station.getId(), BatteryStatus.MAINTENANCE);
+        long usable = total - maintenance;
+
+        return StationSummaryResponse.builder()
+                .stationId(station.getId())
+                .stationName(station.getName())
+                .capacity(station.getCapacity())
+                .totalBatteries(total)
+                .usableBatteries(usable)
+                .maintenanceBatteries(maintenance)
+                .status(station.getStatus())
+                .build();
     }
 }

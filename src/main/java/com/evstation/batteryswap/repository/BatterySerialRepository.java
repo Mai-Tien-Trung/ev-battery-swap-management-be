@@ -16,4 +16,6 @@ public interface BatterySerialRepository extends JpaRepository<BatterySerial, Lo
             "AND b.status <> com.evstation.batteryswap.enums.BatteryStatus.MAINTENANCE")
     long countActiveBatteriesByStation(Long stationId);
     long countByStationIdAndStatusNot(Long stationId, BatteryStatus status);
+    long countByStationIdAndStatus(Long stationId, BatteryStatus status);
+
 }

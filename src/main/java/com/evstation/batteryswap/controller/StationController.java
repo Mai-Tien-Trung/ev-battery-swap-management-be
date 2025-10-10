@@ -2,6 +2,7 @@ package com.evstation.batteryswap.controller;
 
 import com.evstation.batteryswap.dto.request.StationRequest;
 import com.evstation.batteryswap.dto.response.StationResponse;
+import com.evstation.batteryswap.dto.response.StationSummaryResponse;
 import com.evstation.batteryswap.service.StationService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -50,6 +51,15 @@ public class StationController {
     public ResponseEntity<String> checkUsage(@PathVariable Long id) {
         stationService.updateStationUsage(id);
         return ResponseEntity.ok("Updated station usage successfully!");
+    }
+    @GetMapping("/{id}/summary")
+    public ResponseEntity<StationSummaryResponse> getStationSummary(@PathVariable Long id) {
+        return ResponseEntity.ok(stationService.getStationSummary(id));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<StationSummaryResponse>> getAllStationSummaries() {
+        return ResponseEntity.ok(stationService.getAllStationSummaries());
     }
 
 }
