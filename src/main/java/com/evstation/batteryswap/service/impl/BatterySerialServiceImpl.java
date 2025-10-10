@@ -11,12 +11,15 @@ import com.evstation.batteryswap.repository.BatterySerialRepository;
 import com.evstation.batteryswap.repository.StationRepository;
 import com.evstation.batteryswap.service.BatterySerialService;
 import com.evstation.batteryswap.service.StationService;
+import com.evstation.batteryswap.utils.BatterySerialUtil;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class BatterySerialServiceImpl implements BatterySerialService {
 
     private final BatterySerialRepository batterySerialRepository;
@@ -24,17 +27,7 @@ public class BatterySerialServiceImpl implements BatterySerialService {
     private final StationRepository stationRepository;
     private final StationService stationService;
 
-    public BatterySerialServiceImpl(
-            BatterySerialRepository batterySerialRepository,
-            BatteryRepository batteryRepository,
-            StationRepository stationRepository,
-            StationService stationService
-    ) {
-        this.batterySerialRepository = batterySerialRepository;
-        this.batteryRepository = batteryRepository;
-        this.stationRepository = stationRepository;
-        this.stationService = stationService;
-    }
+
 
     private BatteryResponse mapToResponse(BatterySerial serial) {
         return BatteryResponse.builder()
@@ -62,7 +55,7 @@ public class BatterySerialServiceImpl implements BatterySerialService {
 
     @Override
     public BatteryResponse create(BatteryRequest request) {
-        // 🔹 Lấy loại pin (model)
+        // 🔹 Lấy model pin (Battery)
         Battery batteryModel = batteryRepository.findById(request.getBatteryId())
                 .orElseThrow(() -> new RuntimeException("Battery model not found"));
 
@@ -77,24 +70,29 @@ public class BatterySerialServiceImpl implements BatterySerialService {
                     + currentCount + "/" + station.getCapacity() + " pin). Không thể thêm pin mới.");
         }
 
+        // 🔹 Sinh serialNumber ngẫu nhiên thống nhất
+        String randomSerial = BatterySerialUtil.generateSerialNumber();
+
         // 🔹 Tạo mới BatterySerial
         BatterySerial serial = BatterySerial.builder()
-                .serialNumber(request.getSerialNumber())
+                .serialNumber(randomSerial)
                 .status(request.getStatus() != null ? request.getStatus() : BatteryStatus.AVAILABLE)
                 .station(station)
                 .battery(batteryModel)
                 .initialCapacity(batteryModel.getDesignCapacity())
                 .currentCapacity(batteryModel.getDesignCapacity())
                 .stateOfHealth(100.0)
+                .swapCount(0)
                 .build();
 
         batterySerialRepository.save(serial);
 
-        // 🔹 Cập nhật trạng thái trạm sau khi thêm pin
+        // 🔹 Cập nhật lại trạng thái trạm sau khi thêm pin
         stationService.updateStationUsage(station.getId());
 
         return mapToResponse(serial);
     }
+
 
     @Override
     public BatteryResponse update(Long id, BatteryRequest request) {

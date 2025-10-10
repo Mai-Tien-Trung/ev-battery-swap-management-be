@@ -7,6 +7,7 @@ import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.repository.*;
 import com.evstation.batteryswap.service.LinkVehicleService;
+import com.evstation.batteryswap.utils.BatterySerialUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -82,7 +83,7 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
 
         for (int i = 0; i < plan.getMaxBatteries(); i++) {
             BatterySerial serial = new BatterySerial();
-            serial.setSerialNumber("BAT-" + UUID.randomUUID());
+            serial.setSerialNumber(BatterySerialUtil.generateSerialNumber());
             serial.setSwapCount(0);
             serial.setStatus(BatteryStatus.IN_USE);
             serial.setStation(null); // đang gắn cho user

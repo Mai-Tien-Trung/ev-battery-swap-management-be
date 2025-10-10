@@ -11,7 +11,6 @@ import lombok.*;
 @Builder
 public class BatteryRequest {
 
-    @NotBlank(message = "Serial number không được để trống")
     private String serialNumber;
 
     @NotNull(message = "Trạng thái pin không được để trống")
