@@ -15,6 +15,7 @@ import com.evstation.batteryswap.utils.BatterySerialUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -127,4 +128,18 @@ public class BatterySerialServiceImpl implements BatterySerialService {
             stationService.updateStationUsage(station.getId());
         }
     }
+    @Override
+    public BatterySerial updateStatus(Long id, BatteryStatus status) {
+        BatterySerial serial = batterySerialRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Battery serial not found"));
+        serial.setStatus(status);
+        serial.setUpdatedAt(LocalDateTime.now());
+        batterySerialRepository.save(serial);
+
+        // Cập nhật trạng thái trạm sau khi đổi
+        stationService.updateStationUsage(serial.getStation().getId());
+
+        return serial;
+    }
+
 }

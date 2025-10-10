@@ -1,7 +1,10 @@
 package com.evstation.batteryswap.controller;
 
 import com.evstation.batteryswap.dto.request.BatteryRequest;
+import com.evstation.batteryswap.dto.request.UpdateBatterySerialStatusRequest;
 import com.evstation.batteryswap.dto.response.BatteryResponse;
+import com.evstation.batteryswap.dto.response.BatterySerialResponse;
+import com.evstation.batteryswap.entity.BatterySerial;
 import com.evstation.batteryswap.service.BatterySerialService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -45,4 +48,25 @@ public class BatterySerialController {
         batterySerialService.delete(id);
         return ResponseEntity.noContent().build();
     }
+    @PutMapping("/{id}/status")
+    public ResponseEntity<BatterySerialResponse> updateStatus(
+            @PathVariable Long id,
+            @RequestBody UpdateBatterySerialStatusRequest request
+    ) {
+        BatterySerial serial = batterySerialService.updateStatus(id, request.getStatus());
+
+        BatterySerialResponse response = BatterySerialResponse.builder()
+                .id(serial.getId())
+                .serialNumber(serial.getSerialNumber())
+                .status(serial.getStatus())
+                .stationName(serial.getStation() != null ? serial.getStation().getName() : null)
+                .batteryName(serial.getBattery() != null ? serial.getBattery().getName() : null)
+                .currentCapacity(serial.getCurrentCapacity())
+                .stateOfHealth(serial.getStateOfHealth())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+
 }

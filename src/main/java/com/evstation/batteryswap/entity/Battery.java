@@ -1,5 +1,6 @@
 package com.evstation.batteryswap.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,6 +29,7 @@ public class Battery {
     private String description;
 
     @OneToMany(mappedBy = "battery", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<BatterySerial> serials = new ArrayList<>();
 
     private LocalDateTime createdAt = LocalDateTime.now();
