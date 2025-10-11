@@ -30,4 +30,10 @@ public class Station {
     private int capacity;
 
     private String phone;  // Số liên hệ
+
+    @Column
+    private Double latitude;   // Vĩ độ
+
+    @Column
+    private Double longitude;  // Kinh độ
 }

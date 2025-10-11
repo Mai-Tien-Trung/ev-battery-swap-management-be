@@ -16,4 +16,6 @@ public class StationResponse {
     private StationStatus status;
     private int capacity;
     private String phone;
+    private Double latitude;
+    private Double longitude;
 }
