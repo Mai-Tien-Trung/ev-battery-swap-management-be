@@ -1,6 +1,7 @@
 package com.evstation.batteryswap.entity;
 
 import com.evstation.batteryswap.enums.PlanStatus;
+import com.evstation.batteryswap.enums.PlanType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,8 +29,13 @@ public class SubscriptionPlan {
 
     @Column(nullable = false)
     private Integer maxBatteries;
-    @Column(nullable = false)
+
     private double baseMileage; // km cơ bản đi được
+    private Double baseEnergy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PlanType planType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
