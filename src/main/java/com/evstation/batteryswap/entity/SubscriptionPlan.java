@@ -30,7 +30,7 @@ public class SubscriptionPlan {
     @Column(nullable = false)
     private Integer maxBatteries;
 
-    private double baseMileage; // km cơ bản đi được
+    private Double baseMileage; // km cơ bản đi được
     private Double baseEnergy;
 
     @Enumerated(EnumType.STRING)
