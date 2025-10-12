@@ -26,7 +26,9 @@ public class SwapTransaction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
-
+    private Double energyUsed;
+    private Double distance;
+    private Double cost;
     // Pin thật được sử dụng trong giao dịch
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "battery_serial_id", nullable = false)
