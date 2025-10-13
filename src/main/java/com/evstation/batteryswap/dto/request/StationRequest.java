@@ -26,4 +26,13 @@ public class StationRequest {
 
     @Pattern(regexp = "^(\\+84|0)\\d{9,10}$", message = "Số điện thoại không hợp lệ")
     private String phone;
+
+    // Optional GPS coordinates
+    @DecimalMin(value = "-90", inclusive = true, message = "Latitude must be between -90 and 90")
+    @DecimalMax(value = "90", inclusive = true, message = "Latitude must be between -90 and 90")
+    private Double latitude;
+
+    @DecimalMin(value = "-180", inclusive = true, message = "Longitude must be between -180 and 180")
+    @DecimalMax(value = "180", inclusive = true, message = "Longitude must be between -180 and 180")
+    private Double longitude;
 }
