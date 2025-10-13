@@ -101,7 +101,7 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
             SwapTransaction log = new SwapTransaction();
             log.setUser(user);
             log.setVehicle(vehicle);
-            log.setBatterySerial(b); // ⚡ GẮN PIN THẬT VÀO LOG
+            log.setBatterySerial(b);
             log.setStation(null);    // phát lúc đăng ký, chưa ở trạm
             log.setTimestamp(LocalDateTime.now());
 
@@ -113,7 +113,6 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
 
             logs.add(log);
         }
-        swapTransactionRepository.saveAll(logs);
 
         // 7️⃣ Chuẩn bị response
         VehicleSummaryResponse vehicleRes = new VehicleSummaryResponse(
