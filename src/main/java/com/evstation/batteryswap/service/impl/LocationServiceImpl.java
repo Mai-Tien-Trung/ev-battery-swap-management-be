@@ -6,7 +6,7 @@ import com.evstation.batteryswap.entity.Station;
 import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.exception.InvalidCoordinatesException;
 import com.evstation.batteryswap.exception.StationNotFoundException;
-import com.evstation.batteryswap.repository.BatteryRepository;
+import com.evstation.batteryswap.repository.BatterySerialRepository;
 import com.evstation.batteryswap.repository.LocationRepository;
 import com.evstation.batteryswap.service.LocationService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
-    private final BatteryRepository batteryRepository;
+    private final BatterySerialRepository batterySerialRepository;
 
     @Override
     public double calculateDistance(Double lat1, Double lon1, Double lat2, Double lon2) {
@@ -91,7 +91,7 @@ public class LocationServiceImpl implements LocationService {
     private NearbyStationResponse buildNearbyResponse(Double userLat, Double userLon, Station s) {
         double distanceKm = calculateDistance(userLat, userLon, s.getLatitude(), s.getLongitude());
         double rounded = BigDecimal.valueOf(distanceKm).setScale(2, RoundingMode.HALF_UP).doubleValue();
-        int available = (int) batteryRepository.countByStation_IdAndStatus(s.getId(), BatteryStatus.AVAILABLE);
+    int available = (int) batterySerialRepository.countByStationIdAndStatus(s.getId(), BatteryStatus.AVAILABLE);
         return NearbyStationResponse.builder()
                 .stationId(s.getId())
                 .stationName(s.getName())
