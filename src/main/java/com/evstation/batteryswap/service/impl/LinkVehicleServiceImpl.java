@@ -84,7 +84,6 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
         for (int i = 0; i < plan.getMaxBatteries(); i++) {
             BatterySerial serial = new BatterySerial();
             serial.setSerialNumber(BatterySerialUtil.generateSerialNumber());
-            serial.setSwapCount(0);
             serial.setStatus(BatteryStatus.IN_USE);
             serial.setStation(null); // đang gắn cho user
             serial.setBattery(batteryModel);

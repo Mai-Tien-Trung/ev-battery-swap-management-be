@@ -25,12 +25,10 @@ public class BatterySerial {
     @Column(nullable = false)
     private BatteryStatus status = BatteryStatus.AVAILABLE;
 
-    @Column(nullable = false)
-    private int swapCount = 0;
 
-    // 🔋 Thêm các trường liên quan đến hao mòn
-    private Double initialCapacity;   // Dung lượng thiết kế ban đầu (mAh hoặc Wh)
-    private Double currentCapacity;   // Dung lượng hiện tại đo được
+
+    private Double initialCapacity;
+    private Double currentCapacity;
     private Double stateOfHealth;     // SoH = (current / initial) * 100 (%)
     private Double totalCycleCount = 0.0; // Tổng số chu kỳ sử dụng tương đương (EFC)
 
