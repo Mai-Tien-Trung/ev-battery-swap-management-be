@@ -114,10 +114,7 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
             }
             request.setBaseMileage(null);
         }
-        else if (type == PlanType.UNLIMITED) {
-            request.setBaseMileage(null);
-            request.setBaseEnergy(null);
-        }
+
     }
 
 
