@@ -44,6 +44,10 @@ public class BatterySerial {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehicle_id")
+    private Vehicle vehicle; // xe hiện đang giữ pin
+
     @PreUpdate
     public void onUpdate() {
         updatedAt = LocalDateTime.now();
