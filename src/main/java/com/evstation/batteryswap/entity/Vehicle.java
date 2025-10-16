@@ -17,24 +17,13 @@ public class Vehicle {
     @Column(nullable = false, unique = true)
     private String vin;
 
-    @Column(nullable = false)
-    private String model;
-    private String wheelbase;
-    private String groundClearance;
-    private String seatHeight;
-    private String frontTire;
-    private String rearTire;
-    private String frontSuspension;
-    private String rearSuspension;
-    private String brakeSystem;
-    private String trunkCapacity;
-    private Double weightWithoutBattery;
-    private Double weightWithBattery;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "model_id", nullable = false)
+    private VehicleModel model;
+
     @ManyToMany(mappedBy = "vehicles")
     private List<User> users = new ArrayList<>();
 
-    // Xe có thể có nhiều subscription
     @OneToMany(mappedBy = "vehicle", cascade = CascadeType.ALL)
     private List<Subscription> subscriptions = new ArrayList<>();
 }
-

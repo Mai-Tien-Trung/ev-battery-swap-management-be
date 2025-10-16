@@ -10,6 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class LinkVehicleRequest {
-    private Long vehicleId;
-    private Long subscriptionPlanId;
+    private Long vehicleModelId;       // loại xe chọn từ dealer
+    private Long subscriptionPlanId;   // gói đăng ký pin
 }

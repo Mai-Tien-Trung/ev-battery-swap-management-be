@@ -9,8 +9,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class VehicleSummaryResponse {
+public class VehicleModelResponse {
     private Long id;
-    private String vin;
-    private VehicleModelResponse model;
+    private String name;
+    private String brand;
+    private String brakeSystem;
+    private Double weightWithBattery;
 }
