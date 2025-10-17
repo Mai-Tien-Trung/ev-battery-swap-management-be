@@ -28,11 +28,11 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
     @Override
     public SwapResponse processSwap(String username, SwapRequest req) {
-        // 1️⃣ Lấy user từ token
+        // 1 Lấy user từ token
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2️⃣ Xác định vehicle
+        // 2 Xác định vehicle
         Vehicle vehicle;
         if (req.getVehicleId() != null) {
             vehicle = vehicleRepository.findById(req.getVehicleId())
@@ -99,7 +99,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         newBattery.setStation(null);
         batterySerialRepository.save(newBattery);
 
-        // 8️⃣ Log transaction
+        // 8️ Log transaction
         double energyUsed = (depth / 100.0) * oldBattery.getBattery().getDesignCapacity();
         double cost = energyUsed * 1000;
 
@@ -118,7 +118,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 .build();
         swapTransactionRepository.save(tx);
 
-        log.info("🔁 User {} swapped on vehicle {} | old {} → new {} | SoH: {}→{} | Station {}",
+        log.info(" User {} swapped on vehicle {} | old {} → new {} | SoH: {}→{} | Station {}",
                 user.getUsername(),
                 vehicle.getVin(),
                 oldBattery.getSerialNumber(),
@@ -128,7 +128,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 station.getName()
         );
 
-        // 9️⃣ Trả response
+        // 9️ Trả response
         return SwapResponse.builder()
                 .message("Swap completed successfully at station " + station.getName())
                 .oldSerialNumber(oldBattery.getSerialNumber())
