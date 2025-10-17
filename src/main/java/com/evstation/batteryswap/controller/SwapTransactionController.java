@@ -3,6 +3,7 @@ package com.evstation.batteryswap.controller;
 import com.evstation.batteryswap.dto.request.SwapRequest;
 import com.evstation.batteryswap.dto.response.SwapResponse;
 import com.evstation.batteryswap.entity.SwapTransaction;
+import com.evstation.batteryswap.security.CustomUserDetails;
 import com.evstation.batteryswap.service.SwapTransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,11 +22,12 @@ public class SwapTransactionController {
 
 
     @PostMapping
-    public ResponseEntity<SwapResponse> swapBattery(
-            @AuthenticationPrincipal UserDetails userDetails,
+    public ResponseEntity<SwapResponse> processSwap(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody SwapRequest request
     ) {
-        SwapResponse response = swapTransactionService.processSwap(userDetails.getUsername(), request);
+        String username = userDetails.getUsername();
+        SwapResponse response = swapTransactionService.processSwap(username, request);
         return ResponseEntity.ok(response);
     }
 
