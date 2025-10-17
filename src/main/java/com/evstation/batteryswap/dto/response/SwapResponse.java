@@ -17,6 +17,7 @@ public class SwapResponse {
     private double degradationThisSwap;
     private double totalCycleCount;
     private double energyUsed;
+    private double distanceUsed;
     private double cost;
     private BatteryStatus status;
 }

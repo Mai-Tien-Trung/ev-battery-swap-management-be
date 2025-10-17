@@ -26,4 +26,6 @@ public class Vehicle {
 
     @OneToMany(mappedBy = "vehicle", cascade = CascadeType.ALL)
     private List<Subscription> subscriptions = new ArrayList<>();
+    @Column(nullable = false)
+    private Double efficiencyKmPerKwh = 8.0;
 }

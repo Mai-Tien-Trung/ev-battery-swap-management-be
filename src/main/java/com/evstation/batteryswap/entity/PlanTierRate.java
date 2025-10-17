@@ -25,6 +25,8 @@ public class PlanTierRate {
 
     @Column(nullable = false)
     private Double rate;
-
     private String note;
+
+
+
 }

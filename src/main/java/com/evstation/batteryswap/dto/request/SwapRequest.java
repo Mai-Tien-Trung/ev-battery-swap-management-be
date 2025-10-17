@@ -9,7 +9,7 @@ import lombok.*;
 @Builder
 public class SwapRequest {
     private Long vehicleId;
-    private Long newBatteryId;  // Pin user nhận từ trạm
+    private Long batterySerialId;
     private Long stationId;     // Trạm đang swap
-    private double endPercent;  // % pin cũ còn lại khi trả
+    private double endPercent;
 }
