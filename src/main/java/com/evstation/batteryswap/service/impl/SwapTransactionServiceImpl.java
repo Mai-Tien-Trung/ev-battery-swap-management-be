@@ -33,24 +33,24 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
     @Override
     public SwapResponse processSwap(String username, SwapRequest req) {
 
-        // 1️⃣ Lấy user
+        // 1 Lấy user
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2️⃣ Xác định xe
+        // 2 Xác định xe
         Vehicle vehicle = vehicleRepository.findById(req.getVehicleId())
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));
         if (!user.getVehicles().contains(vehicle))
             throw new RuntimeException("Vehicle does not belong to this user");
 
-        // 3️⃣ Lấy subscription ACTIVE
+        // 3 Lấy subscription ACTIVE
         Subscription sub = subscriptionRepository
                 .findByUserIdAndVehicleIdAndStatus(user.getId(), vehicle.getId(), SubscriptionStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active subscription for this vehicle"));
 
         PlanType planType = sub.getPlan().getPlanType();
 
-        // 4️⃣ Xác định pin đang dùng (người dùng chọn)
+        // 4 Xác định pin đang dùng (người dùng chọn)
         BatterySerial oldBattery = batterySerialRepository.findById(req.getBatterySerialId())
                 .orElseThrow(() -> new RuntimeException("Battery not found"));
         if (oldBattery.getVehicle() == null || !oldBattery.getVehicle().getId().equals(vehicle.getId()))
@@ -59,7 +59,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         if (oldBattery.getStatus() != BatteryStatus.IN_USE)
             throw new RuntimeException("This battery is not currently in use");
 
-        // 5️⃣ Xác định trạm swap
+        // 5Xác định trạm swap
         Station station = stationRepository.findById(req.getStationId())
                 .orElseThrow(() -> new RuntimeException("Station not found"));
 
@@ -73,7 +73,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         double cycleUsed = energyUsedWh / designCapacityWh;
 
         // Hao mòn pin: mỗi cycle giảm ~0.75% SoH
-        double degradation = cycleUsed * 0.0075;
+        double degradation = cycleUsed * 0.75;
         double oldSoH = oldBattery.getStateOfHealth();
         double newSoH = Math.max(0, oldSoH - degradation);
 
@@ -84,13 +84,13 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         double efficiencyKmPerKwh = Optional.ofNullable(vehicle.getEfficiencyKmPerKwh()).orElse(8.0);
         double distanceTraveled = energyUsedKWh * efficiencyKmPerKwh;
 
-        // 6️⃣ Cập nhật pin cũ về trạm
+        // 6Cập nhật pin cũ về trạm
         oldBattery.setVehicle(null);
         oldBattery.setStation(station);
         oldBattery.setStatus(newSoH < 80 ? BatteryStatus.MAINTENANCE : BatteryStatus.AVAILABLE);
         batterySerialRepository.save(oldBattery);
 
-        // 7️⃣ Cấp pin mới cho xe
+        //  Cấp pin mới cho xe
         BatterySerial newBattery = batterySerialRepository
                 .findFirstByStationAndStatus(station, BatteryStatus.AVAILABLE)
                 .orElseThrow(() -> new RuntimeException("No available battery at this station"));
@@ -100,7 +100,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         newBattery.setStation(null);
         batterySerialRepository.save(newBattery);
 
-        // 8️⃣ Cập nhật subscription usage
+        //  Cập nhật subscription usage
         double cost = 0.0;
         if (planType == PlanType.ENERGY) {
             double usedBefore = Optional.ofNullable(sub.getEnergyUsedThisMonth()).orElse(0.0);
@@ -132,7 +132,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
         subscriptionRepository.save(sub);
 
-        // 9️⃣ Lưu transaction
+        // 9 Lưu transaction
         SwapTransaction tx = SwapTransaction.builder()
                 .user(user)
                 .vehicle(vehicle)
@@ -153,7 +153,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         log.info("✅ SWAP | user={} | planType={} | energyUsed={}kWh | distance={}km | cost={}₫ | ΔSoH={}%",
                 user.getUsername(), planType, energyUsedKWh, distanceTraveled, cost, degradation * 100);
 
-        // 🔟 Trả response
+        // Trả response
         return SwapResponse.builder()
                 .message("Swap completed successfully at station " + station.getName())
                 .oldSerialNumber(oldBattery.getSerialNumber())
@@ -161,7 +161,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 .oldSoH(oldSoH)
                 .newSoH(newSoH)
                 .depthOfDischarge(depth)
-                .degradationThisSwap(degradation * 100)
+                .degradationThisSwap(degradation)
                 .totalCycleCount(oldBattery.getTotalCycleCount())
                 .energyUsed(energyUsedKWh)
                 .distanceUsed(distanceTraveled)
