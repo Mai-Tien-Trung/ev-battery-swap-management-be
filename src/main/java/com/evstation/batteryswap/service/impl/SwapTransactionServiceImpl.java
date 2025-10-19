@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -65,20 +66,31 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
         // ⚡ TÍNH TOÁN NĂNG LƯỢNG & HAO MÒN
         double designCapacityWh = oldBattery.getBattery().getDesignCapacity(); // Wh
-        double depth = 100 - req.getEndPercent(); // % xả
+
+        // Lấy phần trăm pin thực tế khi người dùng bắt đầu sử dụng pin
+        double startPercent = Optional.ofNullable(oldBattery.getChargePercent()).orElse(100.0);
+        double endPercent = req.getEndPercent();
+
+            // Độ sâu xả (Depth of Discharge)
+        double depth = startPercent - endPercent;
+        if (depth < 0) depth = 0;
+
+        // Năng lượng sử dụng
         double energyUsedWh = (depth / 100.0) * designCapacityWh;
         double energyUsedKWh = energyUsedWh / 1000.0;
 
-        // Equivalent Full Cycle (EFC)
-        double cycleUsed = energyUsedWh / designCapacityWh;
 
+        // Equivalent Full Cycle (EFC)
+        double cycleUsed = depth / 100.0;
         // Hao mòn pin: mỗi cycle giảm ~0.75% SoH
         double degradation = cycleUsed * 0.75;
-        double oldSoH = oldBattery.getStateOfHealth();
+        double oldSoH = Optional.ofNullable(oldBattery.getStateOfHealth()).orElse(100.0);
         double newSoH = Math.max(0, oldSoH - degradation);
 
         oldBattery.setStateOfHealth(newSoH);
-        oldBattery.setTotalCycleCount(oldBattery.getTotalCycleCount() + cycleUsed);
+        oldBattery.setTotalCycleCount(
+                Optional.ofNullable(oldBattery.getTotalCycleCount()).orElse(0.0) + cycleUsed
+        );
 
         // Quy đổi ra quãng đường (theo hiệu suất xe)
         double efficiencyKmPerKwh = Optional.ofNullable(vehicle.getEfficiencyKmPerKwh()).orElse(8.0);
@@ -87,14 +99,25 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         // 6Cập nhật pin cũ về trạm
         oldBattery.setVehicle(null);
         oldBattery.setStation(station);
-        oldBattery.setStatus(newSoH < 80 ? BatteryStatus.MAINTENANCE : BatteryStatus.AVAILABLE);
+        double randomChargedPercent = 0.0;
+
+        if (newSoH >= 80) {
+             randomChargedPercent = 95 + new Random().nextDouble() * 5; // 95–100%
+            randomChargedPercent = Math.round(randomChargedPercent * 10.0) / 10.0;
+            oldBattery.setChargePercent(randomChargedPercent);
+            oldBattery.setStatus(BatteryStatus.AVAILABLE);
+        } else {
+            randomChargedPercent = req.getEndPercent();
+            oldBattery.setChargePercent(req.getEndPercent()); // nếu SoH < 80, giữ nguyên %
+            oldBattery.setStatus(BatteryStatus.MAINTENANCE);
+        }
+
         batterySerialRepository.save(oldBattery);
 
         //  Cấp pin mới cho xe
         BatterySerial newBattery = batterySerialRepository
-                .findFirstByStationAndStatus(station, BatteryStatus.AVAILABLE)
+                .findRandomAvailableBatteryAtStation(station.getId())
                 .orElseThrow(() -> new RuntimeException("No available battery at this station"));
-
         newBattery.setStatus(BatteryStatus.IN_USE);
         newBattery.setVehicle(vehicle);
         newBattery.setStation(null);
@@ -141,7 +164,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 .energyUsed(energyUsedKWh)
                 .distance(distanceTraveled)
                 .cost(cost)
-                .startPercent(100.0)
+                .startPercent(startPercent)
                 .endPercent(req.getEndPercent())
                 .depthOfDischarge(depth)
                 .degradationThisSwap(degradation * 100) // hiển thị %
@@ -150,7 +173,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
         swapTransactionRepository.save(tx);
 
-        log.info("✅ SWAP | user={} | planType={} | energyUsed={}kWh | distance={}km | cost={}₫ | ΔSoH={}%",
+        log.info("SWAP | user={} | planType={} | energyUsed={}kWh | distance={}km | cost={}₫ | ΔSoH={}%",
                 user.getUsername(), planType, energyUsedKWh, distanceTraveled, cost, degradation * 100);
 
         // Trả response
@@ -167,6 +190,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 .distanceUsed(distanceTraveled)
                 .cost(cost)
                 .status(oldBattery.getStatus())
+                .oldBatteryChargedPercent(randomChargedPercent)
                 .build();
     }
 }
