@@ -8,6 +8,6 @@ public interface VehicleModelService {
     VehicleModel create(VehicleModel model);
     List<VehicleModelResponse> getAll();
     VehicleModelResponse getById(Long id);
-    VehicleModel update(Long id, VehicleModel model);
+    VehicleModelResponse update(Long id, VehicleModel model);
     void delete(Long id);
 }

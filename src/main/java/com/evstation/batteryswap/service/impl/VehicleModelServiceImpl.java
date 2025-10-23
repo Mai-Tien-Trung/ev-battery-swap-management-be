@@ -43,7 +43,7 @@ public class VehicleModelServiceImpl implements VehicleModelService {
 
 
     @Override
-    public VehicleModel update(Long id, VehicleModel model) {
+    public VehicleModelResponse update(Long id, VehicleModel model) {
         VehicleModel existing = vehicleModelRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vehicle model not found"));
         existing.setBrand(model.getBrand());
@@ -58,8 +58,8 @@ public class VehicleModelServiceImpl implements VehicleModelService {
         existing.setTrunkCapacity(model.getTrunkCapacity());
         existing.setWeightWithoutBattery(model.getWeightWithoutBattery());
         existing.setWeightWithBattery(model.getWeightWithBattery());
-        return vehicleModelRepository.save(existing);
-    }
+        VehicleModel saved = vehicleModelRepository.save(existing);
+        return mapToResponse(saved);    }
 
     @Override
     public void delete(Long id) {

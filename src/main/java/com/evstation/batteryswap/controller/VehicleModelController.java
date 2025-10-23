@@ -31,7 +31,7 @@ public class VehicleModelController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<VehicleModel> update(@PathVariable Long id, @RequestBody VehicleModel model) {
+    public ResponseEntity<VehicleModelResponse> update(@PathVariable Long id, @RequestBody VehicleModel model) {
         return ResponseEntity.ok(vehicleModelService.update(id, model));
     }
 
