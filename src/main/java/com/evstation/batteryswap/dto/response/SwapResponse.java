@@ -19,5 +19,6 @@ public class SwapResponse {
     private double energyUsed;
     private double distanceUsed;
     private double cost;
+    private Double oldBatteryChargedPercent;
     private BatteryStatus status;
 }

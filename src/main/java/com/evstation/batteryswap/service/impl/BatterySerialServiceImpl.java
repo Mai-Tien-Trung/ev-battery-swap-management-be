@@ -83,6 +83,8 @@ public class BatterySerialServiceImpl implements BatterySerialService {
                 .initialCapacity(batteryModel.getDesignCapacity())
                 .currentCapacity(batteryModel.getDesignCapacity())
                 .stateOfHealth(100.0)
+                .totalCycleCount(0.0)
+                .chargePercent(100.0)
                 .build();
 
         batterySerialRepository.save(serial);

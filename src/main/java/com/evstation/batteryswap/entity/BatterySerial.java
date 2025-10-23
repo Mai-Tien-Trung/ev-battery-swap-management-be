@@ -47,6 +47,8 @@ public class BatterySerial {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id")
     private Vehicle vehicle; // xe hiện đang giữ pin
+    @Column(name = "charge_percent")
+    private Double chargePercent = 100.0;
 
     @PreUpdate
     public void onUpdate() {
