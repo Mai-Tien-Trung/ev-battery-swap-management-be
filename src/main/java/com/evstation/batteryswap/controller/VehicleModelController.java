@@ -1,5 +1,6 @@
 package com.evstation.batteryswap.controller.admin;
 
+import com.evstation.batteryswap.dto.response.VehicleModelResponse;
 import com.evstation.batteryswap.entity.VehicleModel;
 import com.evstation.batteryswap.service.VehicleModelService;
 import lombok.RequiredArgsConstructor;
@@ -21,12 +22,11 @@ public class VehicleModelController {
     }
 
     @GetMapping
-    public ResponseEntity<List<VehicleModel>> getAll() {
+    public ResponseEntity<List<VehicleModelResponse>> getAll() {
         return ResponseEntity.ok(vehicleModelService.getAll());
     }
-
     @GetMapping("/{id}")
-    public ResponseEntity<VehicleModel> getById(@PathVariable Long id) {
+    public ResponseEntity<VehicleModelResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(vehicleModelService.getById(id));
     }
 
