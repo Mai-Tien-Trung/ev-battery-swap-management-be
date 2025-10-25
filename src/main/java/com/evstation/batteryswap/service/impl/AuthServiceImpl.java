@@ -4,11 +4,12 @@ import com.evstation.batteryswap.dto.request.LoginRequest;
 import com.evstation.batteryswap.dto.request.RegisterRequest;
 import com.evstation.batteryswap.dto.response.AuthResponse;
 import com.evstation.batteryswap.dto.response.UserInfoResponse;
-
 import com.evstation.batteryswap.entity.User;
 import com.evstation.batteryswap.enums.Role;
 import com.evstation.batteryswap.repository.UserRepository;
 import com.evstation.batteryswap.security.JwtService;
+import com.evstation.batteryswap.entity.RefreshToken;
+import com.evstation.batteryswap.repository.RefreshTokenRepository;
 import com.evstation.batteryswap.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,16 +25,19 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final RefreshTokenRepository refreshRepo;
     private final AuthenticationManager authenticationManager;
 
     @Autowired
     public AuthServiceImpl(UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
                            JwtService jwtService,
+                           RefreshTokenRepository refreshRepo,
                            AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.refreshRepo = refreshRepo;
         this.authenticationManager = authenticationManager;
     }
 
@@ -56,11 +60,10 @@ public class AuthServiceImpl implements AuthService {
 
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user);
-
+        // không sinh token ở đây — để login sinh ra
         return new AuthResponse(
                 "Register thành công",
-                token,
+                null,
                 user.getUsername(),
                 user.getRole().name()
         );
@@ -75,11 +78,23 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
 
-        String token = jwtService.generateToken(user);
+        // 🔹 Sinh token chuẩn mới
+        String accessToken = jwtService.generateAccessToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
 
+        // 🔹 Lưu refresh token vào DB
+        var claims = jwtService.parseClaims(refreshToken);
+        RefreshToken ref = new RefreshToken();
+        ref.setToken(refreshToken);
+        ref.setJti(claims.getId());
+        ref.setUserId(user.getId());
+        ref.setExpiryDate(claims.getExpiration().toInstant());
+        refreshRepo.save(ref);
+
+        // 🔹 Trả về response
         return new AuthResponse(
                 "Login thành công",
-                token,
+                accessToken,
                 user.getUsername(),
                 user.getRole().name()
         );
