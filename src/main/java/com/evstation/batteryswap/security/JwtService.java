@@ -12,7 +12,6 @@ import java.util.*;
 @Service
 public class JwtService {
 
-    // 🔹 Bạn có thể load từ ENV sau này, giờ hardcode tạm
     private static final String SECRET = "mysecretmysecretmysecretmysecretmysecret123";
     private static final long ACCESS_EXP = 1000 * 60 * 15;      // 15 phút
     private static final long REFRESH_EXP = 1000L * 60 * 60 * 24 * 7; // 7 ngày
