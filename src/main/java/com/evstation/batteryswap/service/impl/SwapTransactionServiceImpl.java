@@ -7,6 +7,7 @@ import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.PlanType;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.repository.*;
+import com.evstation.batteryswap.service.InvoiceService;
 import com.evstation.batteryswap.service.SwapTransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
     private final SubscriptionRepository subscriptionRepository;
     private final PlanTierRateRepository planTierRateRepository;
     private final SwapTransactionRepository swapTransactionRepository;
+    private final InvoiceService invoiceService;
 
     @Override
     public SwapResponse processSwap(String username, SwapRequest req) {
@@ -125,16 +127,19 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
         //  Cập nhật subscription usage
         double cost = 0.0;
+        double overage = 0.0;
+        PlanTierRate tierRate = null;
+        
         if (planType == PlanType.ENERGY) {
             double usedBefore = Optional.ofNullable(sub.getEnergyUsedThisMonth()).orElse(0.0);
             double totalAfter = usedBefore + energyUsedKWh;
             double base = Optional.ofNullable(sub.getPlan().getBaseEnergy()).orElse(0.0);
 
             if (totalAfter > base) {
-                double overage = totalAfter - base;
-                PlanTierRate tier = planTierRateRepository.findTierRate(PlanType.ENERGY, totalAfter)
+                overage = totalAfter - base;
+                tierRate = planTierRateRepository.findTierRate(PlanType.ENERGY, totalAfter)
                         .orElseThrow(() -> new RuntimeException("No ENERGY tier found"));
-                cost = overage * tier.getRate();
+                cost = overage * tierRate.getRate();
             }
 
             sub.setEnergyUsedThisMonth(totalAfter);
@@ -144,10 +149,10 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
             double base = Optional.ofNullable(sub.getPlan().getBaseMileage()).orElse(0.0);
 
             if (totalAfter > base) {
-                double overage = totalAfter - base;
-                PlanTierRate tier = planTierRateRepository.findTierRate(PlanType.DISTANCE, totalAfter)
+                overage = totalAfter - base;
+                tierRate = planTierRateRepository.findTierRate(PlanType.DISTANCE, totalAfter)
                         .orElseThrow(() -> new RuntimeException("No DISTANCE tier found"));
-                cost = overage * tier.getRate();
+                cost = overage * tierRate.getRate();
             }
 
             sub.setDistanceUsedThisMonth(totalAfter);
@@ -175,6 +180,11 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
         log.info("SWAP | user={} | planType={} | energyUsed={}kWh | distance={}km | cost={}₫ | ΔSoH={}%",
                 user.getUsername(), planType, energyUsedKWh, distanceTraveled, cost, degradation * 100);
+
+        // 10 Tạo invoice nếu vượt base usage
+        if (cost > 0 && overage > 0 && tierRate != null) {
+            invoiceService.createInvoice(sub, tx, overage, tierRate.getRate(), planType);
+        }
 
         // Trả response
         return SwapResponse.builder()

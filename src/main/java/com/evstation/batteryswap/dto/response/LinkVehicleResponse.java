@@ -16,5 +16,8 @@ public class LinkVehicleResponse {
     private VehicleSummaryResponse vehicle;
     private SubscriptionResponse subscription;
     private List<BatterySummaryResponse> batteries;
-
+    
+    // Invoice information for initial payment
+    private Long invoiceId;
+    private Double invoiceAmount;
 }
