@@ -28,8 +28,10 @@ public interface BatterySerialRepository extends JpaRepository<BatterySerial, Lo
     //  Lấy toàn bộ pin đang IN_USE của xe (nếu xe có nhiều pin)
     List<BatterySerial> findByVehicleAndStatus(Vehicle vehicle, BatteryStatus status);
 
-    // Lấy pin theo vehicleId
-    List<BatterySerial> findByVehicleId(Long vehicleId);
+    //  Lấy 1 pin có sẵn trong trạm (AVAILABLE)
+    Optional<BatterySerial> findFirstByStationAndStatus(Station station, BatteryStatus status);
+    Optional<BatterySerial> findTopByVehicleAndStatusOrderByStateOfHealthAsc(Vehicle vehicle, BatteryStatus status);
+    List<BatterySerial> findByVehicle(Vehicle vehicle);
 
     // Lấy tất cả pin theo trạm
     List<BatterySerial> findByStation(Station station);
@@ -44,5 +46,8 @@ public interface BatterySerialRepository extends JpaRepository<BatterySerial, Lo
 
     // Lấy pin theo status và không có vehicle (chờ activation)
     List<BatterySerial> findByStatusAndVehicleIsNull(BatteryStatus status);
+
+    // Lấy pin theo vehicleId
+    List<BatterySerial> findByVehicleId(Long vehicleId);
 
 }
