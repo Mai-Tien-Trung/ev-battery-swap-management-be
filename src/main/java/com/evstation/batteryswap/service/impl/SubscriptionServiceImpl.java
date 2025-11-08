@@ -1,11 +1,9 @@
 package com.evstation.batteryswap.service.impl;
 
 import com.evstation.batteryswap.dto.response.SubscriptionDetailResponse;
-import com.evstation.batteryswap.entity.BatterySerial;
-import com.evstation.batteryswap.entity.Subscription;
-import com.evstation.batteryswap.entity.SubscriptionPlan;
+import com.evstation.batteryswap.entity.*;
+import com.evstation.batteryswap.entity.Invoice;
 
-import com.evstation.batteryswap.entity.Vehicle;
 import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.repository.BatterySerialRepository;
