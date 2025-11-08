@@ -96,7 +96,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         );
 
         // Quy đổi ra quãng đường (theo hiệu suất xe)
-        double efficiencyKmPerKwh = Optional.ofNullable(vehicle.getEfficiencyKmPerKwh()).orElse(8.0);
+        double efficiencyKmPerKwh = Optional.ofNullable(vehicle.getEfficiencyKmPerKwh()).orElse(20.0);
         double distanceTraveled = energyUsedKWh * efficiencyKmPerKwh;
 
         // 6Cập nhật pin cũ về trạm

@@ -207,7 +207,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 : currentPlan;
 
         return new SubscriptionDetailResponse(
-                vehicle.getModel() + " " + vehicle.getVin(),
+                vehicle.getModel().getName() + " " + vehicle.getVin(),
                 currentPlan.getName(),
                 sub.getStartDate(),
                 sub.getEndDate(),
@@ -227,7 +227,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     : currentPlan;
 
             return new SubscriptionDetailResponse(
-                    vehicle.getModel() + " " + vehicle.getVin(),
+                    vehicle.getModel().getName() + " " + vehicle.getVin(),
                     currentPlan.getName(),
                     sub.getStartDate(),
                     sub.getEndDate(),

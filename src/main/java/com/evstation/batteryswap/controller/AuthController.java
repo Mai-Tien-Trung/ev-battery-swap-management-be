@@ -9,6 +9,7 @@ import com.evstation.batteryswap.repository.UserRepository;
 import com.evstation.batteryswap.security.CustomUserDetails;
 import com.evstation.batteryswap.security.JwtService;
 import com.evstation.batteryswap.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -34,7 +35,7 @@ public class AuthController {
 
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> req, HttpServletResponse resp) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> req, HttpServletRequest request) {
         Authentication auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.get("username"), req.get("password"))
         );
@@ -45,7 +46,6 @@ public class AuthController {
         String accessToken = jwtService.generateAccessToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
 
-        // Save refresh token
         var claims = jwtService.parseClaims(refreshToken);
         RefreshToken ref = new RefreshToken();
         ref.setToken(refreshToken);
@@ -54,17 +54,21 @@ public class AuthController {
         ref.setExpiryDate(claims.getExpiration().toInstant());
         refreshRepo.save(ref);
 
-        // Set HttpOnly cookie
+        boolean isLocal = request.getServerName().equals("localhost") || request.getServerName().equals("127.0.0.1");
+
         ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
-                .httpOnly(true).secure(true)
-                .sameSite("Strict")
-                .path("/api/auth/refresh")
-                .maxAge(jwtProps.getRefreshTtlMs() / 1000)
+                .httpOnly(true)
+                .secure(!isLocal)
+                .sameSite(isLocal ? "Lax" : "None")
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
                 .build();
 
-        resp.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok(Map.of("accessToken", accessToken));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(Map.of("accessToken", accessToken));
     }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         authService.register(request);
