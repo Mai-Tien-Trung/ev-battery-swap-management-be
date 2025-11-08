@@ -79,4 +79,13 @@ public interface InvoiceService {
      * @return Danh sách InvoiceResponse
      */
     List<InvoiceResponse> getPendingInvoicesDTO(Long subscriptionId);
+
+    /**
+     * Lấy chi tiết invoice theo ID (chỉ nếu invoice thuộc về user)
+     * @param invoiceId ID của invoice
+     * @param userId ID của user
+     * @return InvoiceResponse
+     * @throws RuntimeException nếu invoice không tồn tại hoặc không thuộc về user
+     */
+    InvoiceResponse getInvoiceByIdForUser(Long invoiceId, Long userId);
 }

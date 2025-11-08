@@ -35,6 +35,22 @@ public class InvoiceController {
     }
 
     /**
+     * Lấy chi tiết một invoice cụ thể của user
+     * GET /api/user/invoices/{invoiceId}
+     * 
+     * User chỉ có thể xem invoice của chính mình
+     */
+    @GetMapping("/{invoiceId}")
+    public ResponseEntity<InvoiceResponse> getInvoiceById(
+            @PathVariable Long invoiceId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Long userId = userDetails.getId();
+        InvoiceResponse invoice = invoiceService.getInvoiceByIdForUser(invoiceId, userId);
+        return ResponseEntity.ok(invoice);
+    }
+
+    /**
      * Lấy invoice pending của một subscription
      */
     @GetMapping("/pending/{subscriptionId}")

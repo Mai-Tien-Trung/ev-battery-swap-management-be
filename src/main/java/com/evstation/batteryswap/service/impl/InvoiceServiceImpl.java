@@ -177,4 +177,21 @@ public class InvoiceServiceImpl implements InvoiceService {
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public InvoiceResponse getInvoiceByIdForUser(Long invoiceId, Long userId) {
+        Invoice invoice = invoiceRepository.findById(invoiceId)
+                .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
+
+        // Kiểm tra invoice có thuộc về user không
+        if (invoice.getSubscription() == null || invoice.getSubscription().getUser() == null) {
+            throw new RuntimeException("Invoice has no associated user");
+        }
+
+        if (!invoice.getSubscription().getUser().getId().equals(userId)) {
+            throw new RuntimeException("Access denied: Invoice does not belong to this user");
+        }
+
+        return toResponse(invoice);
+    }
 }
