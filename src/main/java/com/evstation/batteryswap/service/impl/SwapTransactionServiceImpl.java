@@ -221,7 +221,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 .energyUsed(energyUsedKWh)
                 .distanceUsed(distanceTraveled)
                 .cost(cost)
-                .status(oldBattery.getStatus())
+//                .status(oldBattery.getStatus())
                 .oldBatteryChargedPercent(randomChargedPercent)
                 .build();
     }
