@@ -6,6 +6,7 @@ import com.evstation.batteryswap.entity.*;
 import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.repository.*;
+import com.evstation.batteryswap.service.InvoiceService;
 import com.evstation.batteryswap.service.LinkVehicleService;
 import com.evstation.batteryswap.utils.BatterySerialUtil;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
     private final BatteryRepository batteryRepository;
     private final BatterySerialRepository batterySerialRepository;
     private final SwapTransactionRepository swapTransactionRepository;
+    private final InvoiceService invoiceService;
 
     @Override
     public LinkVehicleResponse linkVehicle(Long userId, LinkVehicleRequest request) {
@@ -60,17 +62,27 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
             throw new RuntimeException("User already has an active subscription for this vehicle");
         }
 
-        // 4️⃣ Tạo subscription mới
+        // 4️⃣ Tạo subscription với status PENDING (chờ thanh toán)
         Subscription subscription = new Subscription();
         subscription.setUser(user);
         subscription.setVehicle(vehicle);
         subscription.setPlan(plan);
-        subscription.setStatus(SubscriptionStatus.ACTIVE);
+        subscription.setStatus(SubscriptionStatus.PENDING);  // ⚠️ PENDING cho đến khi thanh toán
         subscription.setStartDate(LocalDate.now());
         subscription.setEndDate(LocalDate.now().plusDays(plan.getDurationDays()));
         subscriptionRepository.save(subscription);
 
-        // 5️⃣ Lấy model pin mặc định
+        // 5️⃣ Tạo invoice cho initial subscription payment
+        Invoice initialInvoice = invoiceService.createSubscriptionRenewalInvoice(
+                subscription, 
+                plan.getPrice(), 
+                plan.getName()
+        );
+
+        log.info("INITIAL SUBSCRIPTION INVOICE CREATED | userId={} | vehicleId={} | invoiceId={} | amount={}₫",
+                userId, vehicle.getId(), initialInvoice.getId(), plan.getPrice());
+
+        // 6️⃣ Lấy model pin mặc định
         Battery batteryModel = batteryRepository.findById(1L)
                 .orElseThrow(() -> new RuntimeException("Battery model not found"));
 
@@ -113,6 +125,9 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
         }
         swapTransactionRepository.saveAll(logs);
 
+        // 8️⃣ KHÔNG tạo swap transaction logs - chờ payment
+        // Batteries sẽ được assign sau khi thanh toán
+
         VehicleSummaryResponse vehicleRes = VehicleSummaryResponse.builder()
                 .id(vehicle.getId())
                 .vin(vehicle.getVin())
@@ -138,7 +153,7 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
         SubscriptionResponse subRes = SubscriptionResponse.builder()
                 .id(subscription.getId())
                 .planName(plan.getName())
-                .status(subscription.getStatus())
+                .status(subscription.getStatus())  // PENDING
                 .startDate(subscription.getStartDate())
                 .endDate(subscription.getEndDate())
                 .build();
@@ -147,16 +162,19 @@ public class LinkVehicleServiceImpl implements LinkVehicleService {
                 .map(b -> BatterySummaryResponse.builder()
                         .id(b.getId())
                         .serialNumber(b.getSerialNumber())
-                        .status(b.getStatus().name())
+                        .status(b.getStatus().name())  // AVAILABLE
                         .build())
                 .toList();
 
         return LinkVehicleResponse.builder()
-                .message("Vehicle created and linked successfully. "
-                        + plan.getMaxBatteries() + " new batteries assigned.")
+                .message("Vehicle created. Please pay invoice #" + initialInvoice.getId() 
+                        + " (" + plan.getPrice() + "₫) to activate subscription and receive " 
+                        + plan.getMaxBatteries() + " batteries.")
                 .vehicle(vehicleRes)
                 .subscription(subRes)
                 .batteries(batteryRes)
+                .invoiceId(initialInvoice.getId())  // ⚠️ Return invoice ID
+                .invoiceAmount(initialInvoice.getAmount())
                 .build();
     }
 

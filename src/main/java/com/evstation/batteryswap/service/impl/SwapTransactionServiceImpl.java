@@ -7,6 +7,7 @@ import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.PlanType;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.repository.*;
+import com.evstation.batteryswap.service.InvoiceService;
 import com.evstation.batteryswap.service.SwapTransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
@@ -30,6 +32,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
     private final SubscriptionRepository subscriptionRepository;
     private final PlanTierRateRepository planTierRateRepository;
     private final SwapTransactionRepository swapTransactionRepository;
+    private final InvoiceService invoiceService;
 
     @Override
     public SwapResponse processSwap(String username, SwapRequest req) {
@@ -123,34 +126,58 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         newBattery.setStation(null);
         batterySerialRepository.save(newBattery);
 
-        //  Cập nhật subscription usage
+        //  Cập nhật subscription usage và tính phí
         double cost = 0.0;
+        double overage = 0.0;
+        PlanTierRate tierRate = null;
+        
         if (planType == PlanType.ENERGY) {
             double usedBefore = Optional.ofNullable(sub.getEnergyUsedThisMonth()).orElse(0.0);
-            double totalAfter = usedBefore + energyUsedKWh;
+            double usageThisSwap = energyUsedKWh;
+            double totalAfter = usedBefore + usageThisSwap;
             double base = Optional.ofNullable(sub.getPlan().getBaseEnergy()).orElse(0.0);
 
+            // Tính cost theo bậc thang (progressive tier pricing)
             if (totalAfter > base) {
-                double overage = totalAfter - base;
-                PlanTierRate tier = planTierRateRepository.findTierRate(PlanType.ENERGY, totalAfter)
-                        .orElseThrow(() -> new RuntimeException("No ENERGY tier found"));
-                cost = overage * tier.getRate();
+                double chargeableStart = Math.max(usedBefore, base);
+                double chargeableEnd = totalAfter;
+                
+                cost = calculateTieredCost(PlanType.ENERGY, chargeableStart, chargeableEnd);
+                overage = chargeableEnd - chargeableStart;
+                
+                // Lấy tier rate cuối cùng để lưu vào invoice (tier của totalAfter)
+                tierRate = planTierRateRepository.findTierRate(PlanType.ENERGY, totalAfter)
+                        .orElse(null);
             }
 
             sub.setEnergyUsedThisMonth(totalAfter);
+            
+            log.info("ENERGY BILLING | usedBefore={}kWh | thisSwap={}kWh | total={}kWh | base={}kWh | overage={}kWh | cost={}₫",
+                    usedBefore, usageThisSwap, totalAfter, base, overage, cost);
+                    
         } else {
             double usedBefore = Optional.ofNullable(sub.getDistanceUsedThisMonth()).orElse(0.0);
-            double totalAfter = usedBefore + distanceTraveled;
+            double usageThisSwap = distanceTraveled;
+            double totalAfter = usedBefore + usageThisSwap;
             double base = Optional.ofNullable(sub.getPlan().getBaseMileage()).orElse(0.0);
 
+            // Tính cost theo bậc thang (progressive tier pricing)
             if (totalAfter > base) {
-                double overage = totalAfter - base;
-                PlanTierRate tier = planTierRateRepository.findTierRate(PlanType.DISTANCE, totalAfter)
-                        .orElseThrow(() -> new RuntimeException("No DISTANCE tier found"));
-                cost = overage * tier.getRate();
+                double chargeableStart = Math.max(usedBefore, base);
+                double chargeableEnd = totalAfter;
+                
+                cost = calculateTieredCost(PlanType.DISTANCE, chargeableStart, chargeableEnd);
+                overage = chargeableEnd - chargeableStart;
+                
+                // Lấy tier rate cuối cùng để lưu vào invoice (tier của totalAfter)
+                tierRate = planTierRateRepository.findTierRate(PlanType.DISTANCE, totalAfter)
+                        .orElse(null);
             }
 
             sub.setDistanceUsedThisMonth(totalAfter);
+            
+            log.info("DISTANCE BILLING | usedBefore={}km | thisSwap={}km | total={}km | base={}km | overage={}km | cost={}₫",
+                    usedBefore, usageThisSwap, totalAfter, base, overage, cost);
         }
 
         subscriptionRepository.save(sub);
@@ -176,6 +203,11 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         log.info("SWAP | user={} | planType={} | energyUsed={}kWh | distance={}km | cost={}₫ | ΔSoH={}%",
                 user.getUsername(), planType, energyUsedKWh, distanceTraveled, cost, degradation * 100);
 
+        // 10 Tạo invoice nếu vượt base usage
+        if (cost > 0 && overage > 0 && tierRate != null) {
+            invoiceService.createInvoice(sub, tx, overage, tierRate.getRate(), planType);
+        }
+
         // Trả response
         return SwapResponse.builder()
                 .message("Swap completed successfully at station " + station.getName())
@@ -192,5 +224,74 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 .status(oldBattery.getStatus())
                 .oldBatteryChargedPercent(randomChargedPercent)
                 .build();
+    }
+
+    /**
+     * Tính tiền theo bậc thang (progressive tier pricing)
+     * Ví dụ DISTANCE:
+     * - Tier 1: 100-200km = 5,000₫/km
+     * - Tier 2: 200-300km = 4,000₫/km
+     * - Tier 3: 300+km = 3,000₫/km
+     * 
+     * Nếu đi từ 150km → 250km (100km):
+     * - 50km trong tier 1 (150-200): 50 × 5,000₫ = 250,000₫
+     * - 50km trong tier 2 (200-250): 50 × 4,000₫ = 200,000₫
+     * - Tổng: 450,000₫
+     * 
+     * @param planType DISTANCE hoặc ENERGY
+     * @param rangeStart Điểm bắt đầu tính phí (VD: 150km)
+     * @param rangeEnd Điểm kết thúc (VD: 250km)
+     * @return Tổng chi phí theo bậc thang
+     */
+    private double calculateTieredCost(PlanType planType, double rangeStart, double rangeEnd) {
+        // Lấy tất cả tiers cho plan type, sắp xếp theo minValue
+        List<PlanTierRate> tiers = planTierRateRepository.findByPlanTypeOrderByMinValueAsc(planType);
+        
+        if (tiers.isEmpty()) {
+            log.warn("No tier rates found for planType={}", planType);
+            return 0.0;
+        }
+
+        double totalCost = 0.0;
+        double currentPosition = rangeStart;
+        
+        StringBuilder costBreakdown = new StringBuilder();
+        costBreakdown.append(String.format("Tier breakdown [%.2f → %.2f]: ", rangeStart, rangeEnd));
+
+        for (PlanTierRate tier : tiers) {
+            // Bỏ qua tier nếu currentPosition đã vượt qua tier này
+            double tierMax = Optional.ofNullable(tier.getMaxValue()).orElse(Double.MAX_VALUE);
+            if (currentPosition >= tierMax) {
+                continue;
+            }
+
+            // Bỏ qua tier nếu rangeEnd chưa đến tier này
+            if (rangeEnd <= tier.getMinValue()) {
+                break;
+            }
+
+            // Tính phần overlap giữa [currentPosition, rangeEnd] và [tier.min, tier.max]
+            double chargeableStart = Math.max(currentPosition, tier.getMinValue());
+            double chargeableEnd = Math.min(rangeEnd, tierMax);
+            double chargeableAmount = chargeableEnd - chargeableStart;
+
+            if (chargeableAmount > 0) {
+                double tierCost = chargeableAmount * tier.getRate();
+                totalCost += tierCost;
+                
+                costBreakdown.append(String.format("Tier[%.0f-%.0f]: %.2f × %.0f₫ = %.0f₫; ",
+                        tier.getMinValue(), tierMax, chargeableAmount, tier.getRate(), tierCost));
+                
+                currentPosition = chargeableEnd;
+            }
+
+            // Nếu đã tính hết rangeEnd thì dừng
+            if (currentPosition >= rangeEnd) {
+                break;
+            }
+        }
+
+        log.info("{} | Total: {}₫", costBreakdown.toString(), totalCost);
+        return totalCost;
     }
 }

@@ -54,7 +54,9 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api/v1/**"
+                                "/api/v1/**",
+
+                                "/api/payment/vnpay-return"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
