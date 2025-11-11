@@ -51,6 +51,9 @@ public class SecurityConfig {
                                 "/api/admin/**",
                                 "/api/battery-serials/**",
                                 "/api/user/**",
+                                "/api/batteries/**",
+                                "/api/stations/**",
+
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
