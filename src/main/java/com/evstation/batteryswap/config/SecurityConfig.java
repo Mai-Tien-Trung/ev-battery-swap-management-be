@@ -50,11 +50,11 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/api/v1/**"
+                                "/api/v1/**",
+                                "/api/auth/**"
                         ).permitAll()
-                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/api/staff/swap/**").hasAnyAuthority("STAFF", "ADMIN")                        .requestMatchers("/api/user/**").hasAuthority("USER")
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/**")
+                        .hasAnyAuthority("USER", "STAFF", "ADMIN")
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

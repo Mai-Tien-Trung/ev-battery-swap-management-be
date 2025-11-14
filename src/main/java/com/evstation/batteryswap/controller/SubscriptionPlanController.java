@@ -12,33 +12,37 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 @RestController
 @RequestMapping("/api/admin/subscription-plans")
-@PreAuthorize("hasAuthority('ADMIN')")
 public class SubscriptionPlanController {
 
     @Autowired
     private SubscriptionPlanService subscriptionPlanService;
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping
     public ResponseEntity<SubscriptionPlanResponse> create(@Valid @RequestBody SubscriptionPlanRequest request) {
         return ResponseEntity.ok(subscriptionPlanService.create(request));
     }
 
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @GetMapping
     public ResponseEntity<List<SubscriptionPlanResponse>> getAll() {
         return ResponseEntity.ok(subscriptionPlanService.getAll());
     }
 
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<SubscriptionPlanResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(subscriptionPlanService.getById(id));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<SubscriptionPlanResponse> update(@PathVariable Long id,
                                                            @Valid @RequestBody SubscriptionPlanRequest request) {
         return ResponseEntity.ok(subscriptionPlanService.update(id, request));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         subscriptionPlanService.delete(id);

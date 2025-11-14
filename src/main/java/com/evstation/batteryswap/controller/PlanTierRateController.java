@@ -15,32 +15,36 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/plan-tiers")
-@PreAuthorize("hasAuthority('ADMIN')")
 @RequiredArgsConstructor
 public class PlanTierRateController {
 
     private final PlanTierRateService planTierRateService;
 
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @GetMapping
     public ResponseEntity<List<PlanTierRateResponse>> getAll() {
         return ResponseEntity.ok(planTierRateService.getAll());
     }
 
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @GetMapping("/type/{planType}")
     public ResponseEntity<List<PlanTierRateResponse>> getByPlanType(@PathVariable PlanType planType) {
         return ResponseEntity.ok(planTierRateService.getByPlanType(planType));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping
     public ResponseEntity<PlanTierRateResponse> create(@RequestBody PlanTierRateRequest req) {
         return ResponseEntity.ok(planTierRateService.create(req));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<PlanTierRateResponse> update(@PathVariable Long id, @RequestBody PlanTierRateRequest req) {
         return ResponseEntity.ok(planTierRateService.update(id, req));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         planTierRateService.delete(id);

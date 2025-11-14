@@ -21,7 +21,7 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
 
     // User yêu cầu đổi gói (không đổi ngay, chỉ set nextPlanId)
-    @PreAuthorize("hasAuthority('USER')")
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @PutMapping("/{vehicleId}/change-plan")
     public ResponseEntity<?> requestChangePlan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -47,6 +47,7 @@ public class SubscriptionController {
                 )
         );
     }
+
     @PreAuthorize("hasAuthority('USER')")
     @GetMapping("/{vehicleId}")
     public ResponseEntity<SubscriptionDetailResponse> getSubscriptionDetail(
