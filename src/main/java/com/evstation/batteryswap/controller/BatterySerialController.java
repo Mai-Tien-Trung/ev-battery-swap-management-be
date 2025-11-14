@@ -8,12 +8,14 @@ import com.evstation.batteryswap.entity.BatterySerial;
 import com.evstation.batteryswap.service.BatterySerialService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/battery-serials")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class BatterySerialController {
 
     private final BatterySerialService batterySerialService;

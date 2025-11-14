@@ -8,12 +8,14 @@ import com.evstation.batteryswap.enums.PlanType;
 import com.evstation.batteryswap.service.PlanTierRateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/plan-tiers")
+@PreAuthorize("hasAuthority('ADMIN')")
 @RequiredArgsConstructor
 public class PlanTierRateController {
 

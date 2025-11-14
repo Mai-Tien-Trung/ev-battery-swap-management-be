@@ -5,6 +5,7 @@ import com.evstation.batteryswap.entity.VehicleModel;
 import com.evstation.batteryswap.service.VehicleModelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/vehicle-models")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ADMIN')")
 public class VehicleModelController {
 
     private final VehicleModelService vehicleModelService;

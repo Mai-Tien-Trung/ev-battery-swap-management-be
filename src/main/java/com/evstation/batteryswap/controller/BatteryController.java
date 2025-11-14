@@ -3,12 +3,14 @@ package com.evstation.batteryswap.controller;
 import com.evstation.batteryswap.entity.Battery;
 import com.evstation.batteryswap.service.BatteryService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/batteries")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class BatteryController {
 
     private final BatteryService batteryService;

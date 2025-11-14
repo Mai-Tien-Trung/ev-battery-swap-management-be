@@ -47,19 +47,14 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",
-                                "/api/admin/**",
-                                "/api/battery-serials/**",
-                                "/api/user/**",
-                                "/api/batteries/**",
-                                "/api/stations/**",
-
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api/v1/**"
                         ).permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/api/staff/swap/**").hasAnyAuthority("STAFF", "ADMIN")                        .requestMatchers("/api/user/**").hasAuthority("USER")
+                        .requestMatchers("/api/auth/**").permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
