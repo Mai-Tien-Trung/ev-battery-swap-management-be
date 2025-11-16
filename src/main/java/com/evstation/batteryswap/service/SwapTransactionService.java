@@ -10,4 +10,5 @@ import java.util.Map;
 public interface SwapTransactionService {
     SwapResponse processSwap(String username, SwapRequest request);
     List<Map<String, Object>> getMostFrequentSwapHour();
+    List<Map<String, Object>> getSwapsPerStation();
 }

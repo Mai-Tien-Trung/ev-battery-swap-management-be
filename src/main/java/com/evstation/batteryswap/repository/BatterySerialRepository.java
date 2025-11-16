@@ -44,5 +44,8 @@ public interface BatterySerialRepository extends JpaRepository<BatterySerial, Lo
 
     // Lấy pin theo status và không có vehicle (chờ activation)
     List<BatterySerial> findByStatusAndVehicleIsNull(BatteryStatus status);
-
+    @Query("SELECT b.status, COUNT(b.id) " +
+            "FROM BatterySerial b " +
+            "GROUP BY b.status")
+    List<Object[]> findBatteryStatusDistribution();
 }

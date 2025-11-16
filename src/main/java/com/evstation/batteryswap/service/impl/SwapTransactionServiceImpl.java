@@ -39,23 +39,23 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
     @Override
     public SwapResponse processSwap(String username, SwapRequest req) {
 
-        // 1️⃣ Lấy user
+        //  Lấy user
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 2️⃣ Lấy xe
+        // Lấy xe
         Vehicle vehicle = vehicleRepository.findById(req.getVehicleId())
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));
         if (!user.getVehicles().contains(vehicle))
             throw new RuntimeException("Vehicle does not belong to this user");
 
-        // 3️⃣ Kiểm tra subscription ACTIVE
+        //  Kiểm tra subscription ACTIVE
         Subscription sub = subscriptionRepository
                 .findByUserIdAndVehicleIdAndStatus(user.getId(), vehicle.getId(), SubscriptionStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active subscription for this vehicle"));
         PlanType planType = sub.getPlan().getPlanType();
 
-        // 4️⃣ Lấy pin cũ
+        //  Lấy pin cũ
         BatterySerial oldBattery = batterySerialRepository.findById(req.getBatterySerialId())
                 .orElseThrow(() -> new RuntimeException("Old battery not found"));
         if (oldBattery.getVehicle() == null || !oldBattery.getVehicle().getId().equals(vehicle.getId()))
@@ -63,11 +63,11 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         if (oldBattery.getStatus() != BatteryStatus.IN_USE)
             throw new RuntimeException("This battery is not currently in use");
 
-        // 5️⃣ Lấy trạm
+        // ⃣Lấy trạm
         Station station = stationRepository.findById(req.getStationId())
                 .orElseThrow(() -> new RuntimeException("Station not found"));
 
-        // 6️⃣ Lấy pin mới ngẫu nhiên trong trạm
+        //  Lấy pin mới ngẫu nhiên trong trạm
         BatterySerial newBattery = batterySerialRepository
                 .findRandomAvailableBatteryAtStation(station.getId())
                 .orElseThrow(() -> new RuntimeException("No available battery at this station"));
@@ -76,7 +76,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         if (newBatteryPercent < 95)
             throw new RuntimeException("No fully charged battery available at this station");
 
-        // 7️⃣ Tính toán năng lượng hao mòn pin cũ
+        // Tính toán năng lượng hao mòn pin cũ
         double designCapacityWh = oldBattery.getBattery().getDesignCapacity();
         double startPercent = Optional.ofNullable(oldBattery.getChargePercent()).orElse(100.0);
         double endPercent = req.getEndPercent();
@@ -95,12 +95,12 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         double efficiencyKmPerKwh = Optional.ofNullable(vehicle.getEfficiencyKmPerKwh()).orElse(20.0);
         double distanceTraveled = energyUsedKWh * efficiencyKmPerKwh;
 
-        // 8️⃣ Đặt trạng thái tạm (pending)
+        // Đặt trạng thái tạm (pending)
         oldBattery.setStatus(BatteryStatus.PENDING_OUT);
         newBattery.setStatus(BatteryStatus.PENDING_IN);
         batterySerialRepository.saveAll(java.util.List.of(oldBattery, newBattery));
 
-        // 9️⃣ Lưu transaction (chưa đổi pin thực tế)
+        //  Lưu transaction (chưa đổi pin thực tế)
         SwapTransaction tx = SwapTransaction.builder()
                 .user(user)
                 .vehicle(vehicle)
@@ -119,7 +119,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
         swapTransactionRepository.save(tx);
 
-        // 🔟 Ghi log & trả response
+        // Ghi log & trả response
         log.info("SWAP REQUEST | user={} | vehicle={} | oldBattery={} | newBattery={} | status=PENDING_CONFIRM",
                 user.getUsername(), vehicle.getId(), oldBattery.getSerialNumber(), newBattery.getSerialNumber());
 
@@ -148,6 +148,16 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
             map.put("hour", hourBigDecimal.intValue()); // Giờ
             map.put("count", count);
+            return map;
+        }).collect(Collectors.toList());
+    }
+    @Override
+    public List<Map<String, Object>> getSwapsPerStation() {
+        List<Object[]> results = swapTransactionRepository.findSwapsPerStation();
+        return results.stream().map(arr -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("stationName", (String) arr[0]);
+            map.put("swapCount", (Long) arr[1]);
             return map;
         }).collect(Collectors.toList());
     }

@@ -20,4 +20,11 @@ public interface SwapTransactionRepository extends JpaRepository<SwapTransaction
             "GROUP BY hour " +
             "ORDER BY count DESC, hour ASC", nativeQuery = true)
     List<Object[]> findMostFrequentSwapHour();
+
+    @Query("SELECT s.name as stationName, COUNT(st.id) as swapCount " +
+            "FROM SwapTransaction st " +
+            "JOIN st.station s " +
+            "GROUP BY s.name " +
+            "ORDER BY swapCount DESC")
+    List<Object[]> findSwapsPerStation();
 }

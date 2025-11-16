@@ -16,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -142,5 +144,14 @@ public class BatterySerialServiceImpl implements BatterySerialService {
 
         return serial;
     }
-
+    @Override
+    public List<Map<String, Object>> getBatteryStatusDistribution() {
+        List<Object[]> results = batterySerialRepository.findBatteryStatusDistribution();
+        return results.stream().map(arr -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("status", ((BatteryStatus) arr[0]).name()); // Trả về Tên (String)
+            map.put("count", (Long) arr[1]);
+            return map;
+        }).collect(Collectors.toList());
+    }
 }

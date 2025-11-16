@@ -6,6 +6,7 @@ import com.evstation.batteryswap.entity.BatterySerial;
 import com.evstation.batteryswap.enums.BatteryStatus;
 
 import java.util.List;
+import java.util.Map;
 
 public interface BatterySerialService {
 
@@ -19,4 +20,5 @@ public interface BatterySerialService {
 
     void delete(Long id);
     BatterySerial updateStatus(Long id, BatteryStatus status);
+    List<Map<String, Object>> getBatteryStatusDistribution();
 }
