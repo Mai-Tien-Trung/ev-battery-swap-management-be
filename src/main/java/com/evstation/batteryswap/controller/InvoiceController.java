@@ -9,6 +9,7 @@ import com.evstation.batteryswap.security.CustomUserDetails;
 import com.evstation.batteryswap.service.InvoiceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +27,7 @@ public class InvoiceController {
      * Lấy danh sách tất cả invoice của user
      */
     @GetMapping
+    
     public ResponseEntity<List<InvoiceResponse>> getUserInvoices(
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
@@ -41,6 +43,7 @@ public class InvoiceController {
      * User chỉ có thể xem invoice của chính mình
      */
     @GetMapping("/{invoiceId}")
+    @PreAuthorize("hasAuthority('USER')")
     public ResponseEntity<InvoiceResponse> getInvoiceById(
             @PathVariable Long invoiceId,
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -54,6 +57,7 @@ public class InvoiceController {
      * Lấy invoice pending của một subscription
      */
     @GetMapping("/pending/{subscriptionId}")
+    @PreAuthorize("hasAuthority('USER')")
     public ResponseEntity<List<InvoiceResponse>> getPendingInvoices(
             @PathVariable Long subscriptionId
     ) {
@@ -69,6 +73,7 @@ public class InvoiceController {
      */
     @Deprecated
     @PostMapping("/{invoiceId}/pay-manual")
+    @PreAuthorize("hasAuthority('USER')")
     public ResponseEntity<InvoicePaymentResponse> payInvoiceManual(@PathVariable Long invoiceId) {
         Invoice invoice = invoiceService.markAsPaid(invoiceId);
         
@@ -89,6 +94,7 @@ public class InvoiceController {
      * Kiểm tra subscription có invoice pending không
      */
     @GetMapping("/check-pending/{subscriptionId}")
+    @PreAuthorize("hasAuthority('USER')")
     public ResponseEntity<PendingInvoiceCheckResponse> checkPendingInvoices(@PathVariable Long subscriptionId) {
         boolean hasPending = invoiceService.hasPendingInvoices(subscriptionId);
         List<InvoiceResponse> pendingInvoices = invoiceService.getPendingInvoicesDTO(subscriptionId);
