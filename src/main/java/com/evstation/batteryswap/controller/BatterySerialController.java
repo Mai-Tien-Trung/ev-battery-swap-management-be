@@ -8,6 +8,7 @@ import com.evstation.batteryswap.entity.BatterySerial;
 import com.evstation.batteryswap.service.BatterySerialService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,33 +22,38 @@ public class BatterySerialController {
     public BatterySerialController(BatterySerialService batterySerialService) {
         this.batterySerialService = batterySerialService;
     }
-
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @GetMapping
     public ResponseEntity<List<BatteryResponse>> getAll() {
         return ResponseEntity.ok(batterySerialService.getAll());
     }
 
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @GetMapping("/{id}")
     public ResponseEntity<BatteryResponse> getById(@PathVariable Long id) {
         return ResponseEntity.ok(batterySerialService.getById(id));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PostMapping
     public ResponseEntity<BatteryResponse> create(@Valid @RequestBody BatteryRequest request) {
         return ResponseEntity.ok(batterySerialService.create(request));
     }
-
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<BatteryResponse> update(@PathVariable Long id,
                                                   @Valid @RequestBody BatteryRequest request) {
         return ResponseEntity.ok(batterySerialService.update(id, request));
     }
 
+    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         batterySerialService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PreAuthorize("hasAuthority('ADMIN')")
     @PutMapping("/{id}/status")
     public ResponseEntity<BatterySerialResponse> updateStatus(
             @PathVariable Long id,

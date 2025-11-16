@@ -7,6 +7,7 @@ import com.evstation.batteryswap.security.CustomUserDetails;
 import com.evstation.batteryswap.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,7 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
 
     // User yêu cầu đổi gói (không đổi ngay, chỉ set nextPlanId)
+    @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @PutMapping("/{vehicleId}/change-plan")
     public ResponseEntity<?> requestChangePlan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -45,6 +47,8 @@ public class SubscriptionController {
                 )
         );
     }
+
+    @PreAuthorize("hasAuthority('USER')")
     @GetMapping("/{vehicleId}")
     public ResponseEntity<SubscriptionDetailResponse> getSubscriptionDetail(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -54,6 +58,7 @@ public class SubscriptionController {
         return ResponseEntity.ok(response);
     }
     @GetMapping
+    @PreAuthorize("hasAuthority('USER')")
     public ResponseEntity<List<SubscriptionDetailResponse>> getAllSubscriptions(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         Long userId = userDetails.getId();

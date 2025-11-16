@@ -22,8 +22,7 @@ public class BatterySerial {
     private String serialNumber; // Ví dụ: BAT-001
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private BatteryStatus status = BatteryStatus.AVAILABLE;
+    private BatteryStatus status;
 
 
 

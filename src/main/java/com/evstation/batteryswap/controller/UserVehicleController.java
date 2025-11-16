@@ -11,6 +11,7 @@ import com.evstation.batteryswap.security.CustomUserDetails;
 import com.evstation.batteryswap.service.UserVehicleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/user")
 @RequiredArgsConstructor
+@PreAuthorize("hasAuthority('USER')")
 public class UserVehicleController {
 
     private final UserVehicleService userVehicleService;

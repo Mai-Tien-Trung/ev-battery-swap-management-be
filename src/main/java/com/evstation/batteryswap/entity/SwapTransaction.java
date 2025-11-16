@@ -1,5 +1,6 @@
 package com.evstation.batteryswap.entity;
 
+import com.evstation.batteryswap.enums.SwapTransactionStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -41,10 +42,16 @@ public class SwapTransaction {
 
     // Thời điểm thực hiện
     private LocalDateTime timestamp = LocalDateTime.now();
-
+    @Enumerated(EnumType.STRING)
+    private SwapTransactionStatus status = SwapTransactionStatus.PENDING_CONFIRM;
     // ⚡️ Các trường phục vụ tính hao mòn pin
     private Double startPercent;       // phần trăm lúc nhận pin (VD: 100%)
     private Double endPercent;         // phần trăm lúc trả pin (VD: 20%)
     private Double depthOfDischarge;   // DoD = start - end
     private Double degradationThisSwap; // mức hao mòn % trong giao dịch này
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "confirmed_by")
+    private User staff;
+    private LocalDateTime confirmedAt;
+
 }
