@@ -15,7 +15,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.math.BigDecimal;
 
 @Service
 @RequiredArgsConstructor
@@ -129,5 +134,21 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 .distanceUsed(distanceTraveled)
                 .status(SwapTransactionStatus.PENDING_CONFIRM.name())
                 .build();
+    }
+    @Override
+    public List<Map<String, Object>> getMostFrequentSwapHour() {
+        List<Object[]> results = swapTransactionRepository.findMostFrequentSwapHour();
+
+        return results.stream().map(arr -> {
+            Map<String, Object> map = new HashMap<>();
+
+            //  sửa ở đây:
+            BigDecimal hourBigDecimal = (BigDecimal) arr[0];
+            Long count = (Long) arr[1];
+
+            map.put("hour", hourBigDecimal.intValue()); // Giờ
+            map.put("count", count);
+            return map;
+        }).collect(Collectors.toList());
     }
 }
