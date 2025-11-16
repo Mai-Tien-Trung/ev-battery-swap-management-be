@@ -51,7 +51,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api/v1/**",
-                                "/api/auth/**"
+                                "/api/auth/**",
+                                "/api/payment/vnpay-return"
                         ).permitAll()
                         .requestMatchers("/api/**")
                         .hasAnyAuthority("USER", "STAFF", "ADMIN")
