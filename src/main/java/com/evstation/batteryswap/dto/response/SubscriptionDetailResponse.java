@@ -10,6 +10,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SubscriptionDetailResponse {
+    private Long vehicleId;
     private String vehicle;
     private String currentPlan;
     private LocalDate startDate;
