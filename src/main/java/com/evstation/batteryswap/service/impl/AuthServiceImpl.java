@@ -2,6 +2,7 @@ package com.evstation.batteryswap.service.impl;
 
 import com.evstation.batteryswap.dto.request.LoginRequest;
 import com.evstation.batteryswap.dto.request.RegisterRequest;
+import com.evstation.batteryswap.dto.request.UpdateProfileRequest;
 import com.evstation.batteryswap.dto.response.AuthResponse;
 import com.evstation.batteryswap.dto.response.UserInfoResponse;
 import com.evstation.batteryswap.entity.User;
@@ -114,15 +115,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public UserInfoResponse updateUserInfo(Long userId, Map<String, String> updates) {
+    public UserInfoResponse updateUserInfo(Long userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (updates.containsKey("phone")) {
-            user.setPhone(updates.get("phone"));
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
         }
-        if (updates.containsKey("address")) {
-            user.setAddress(updates.get("address"));
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress());
         }
 
         userRepository.save(user);
