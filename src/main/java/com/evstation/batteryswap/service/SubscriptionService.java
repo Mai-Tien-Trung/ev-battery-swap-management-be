@@ -1,13 +1,12 @@
 package com.evstation.batteryswap.service;
 
-import com.evstation.batteryswap.dto.response.PlanChangeResponse;
 import com.evstation.batteryswap.dto.response.SubscriptionDetailResponse;
 import com.evstation.batteryswap.entity.Subscription;
 
 import java.util.List;
 
 public interface SubscriptionService {
-    PlanChangeResponse changePlan(Long userId, Long vehicleId, Long newPlanId);
+    Subscription changePlan(Long userId, Long vehicleId, Long newPlanId);
     void autoRenewSubscriptions();
     
     /**
@@ -23,13 +22,6 @@ public interface SubscriptionService {
      * @return Subscription đã được activate
      */
     Subscription activateSubscription(Long subscriptionId);
-
-    /**
-     * Activate plan change sau khi thanh toán plan change invoice
-     * @param newSubscriptionId ID của subscription mới (PENDING)
-     * @return Subscription mới đã được activate
-     */
-    Subscription activatePlanChange(Long newSubscriptionId);
     
     SubscriptionDetailResponse getSubscriptionDetail(Long userId, Long vehicleId);
     List<SubscriptionDetailResponse> getAllActiveSubscriptions(Long userId);

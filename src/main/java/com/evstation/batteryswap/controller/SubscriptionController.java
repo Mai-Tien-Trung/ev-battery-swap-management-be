@@ -1,7 +1,6 @@
 package com.evstation.batteryswap.controller;
 
 import com.evstation.batteryswap.dto.request.ChangePlanRequest;
-import com.evstation.batteryswap.dto.response.PlanChangeResponse;
 import com.evstation.batteryswap.dto.response.SubscriptionDetailResponse;
 import com.evstation.batteryswap.entity.Subscription;
 import com.evstation.batteryswap.security.CustomUserDetails;
@@ -13,7 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+import java.util.Map;
 @RestController
 @RequestMapping("/api/user/subscriptions")
 @RequiredArgsConstructor
@@ -21,21 +20,32 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
 
-    // User yêu cầu đổi gói (tạo subscription mới PENDING + invoice)
+    // User yêu cầu đổi gói (không đổi ngay, chỉ set nextPlanId)
     @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @PutMapping("/{vehicleId}/change-plan")
-    public ResponseEntity<PlanChangeResponse> requestChangePlan(
+    public ResponseEntity<?> requestChangePlan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long vehicleId,
             @RequestBody ChangePlanRequest request
     ) {
-        PlanChangeResponse response = subscriptionService.changePlan(
+        Subscription updatedSub = subscriptionService.changePlan(
                 userDetails.getId(),
                 vehicleId,
                 request.getNewPlanId()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                Map.of(
+                        "message", "Change plan request saved. New plan will apply after current subscription ends.",
+                        "subscription", Map.of(
+                                "id", updatedSub.getId(),
+                                "currentPlan", updatedSub.getPlan().getName(),
+                                "nextPlanId", updatedSub.getNextPlanId(),
+                                "status", updatedSub.getStatus(),
+                                "endDate", updatedSub.getEndDate()
+                        )
+                )
+        );
     }
 
     @PreAuthorize("hasAuthority('USER')")
