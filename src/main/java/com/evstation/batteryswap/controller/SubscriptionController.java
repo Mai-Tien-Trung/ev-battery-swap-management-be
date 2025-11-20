@@ -1,6 +1,7 @@
 package com.evstation.batteryswap.controller;
 
 import com.evstation.batteryswap.dto.request.ChangePlanRequest;
+import com.evstation.batteryswap.dto.response.PlanChangeResponse;
 import com.evstation.batteryswap.dto.response.SubscriptionDetailResponse;
 import com.evstation.batteryswap.entity.Subscription;
 import com.evstation.batteryswap.security.CustomUserDetails;
@@ -12,7 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
+
 @RestController
 @RequestMapping("/api/user/subscriptions")
 @RequiredArgsConstructor
@@ -23,31 +24,18 @@ public class SubscriptionController {
     // User yêu cầu đổi gói (tạo subscription mới PENDING + invoice)
     @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @PutMapping("/{vehicleId}/change-plan")
-    public ResponseEntity<?> requestChangePlan(
+    public ResponseEntity<PlanChangeResponse> requestChangePlan(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long vehicleId,
             @RequestBody ChangePlanRequest request
     ) {
-        Subscription newSub = subscriptionService.changePlan(
+        PlanChangeResponse response = subscriptionService.changePlan(
                 userDetails.getId(),
                 vehicleId,
                 request.getNewPlanId()
         );
 
-        return ResponseEntity.ok(
-                Map.of(
-                        "message", "Plan change request created. Please pay the invoice to activate new plan.",
-                        "newSubscription", Map.of(
-                                "id", newSub.getId(),
-                                "plan", newSub.getPlan().getName(),
-                                "status", newSub.getStatus().name(),
-                                "startDate", newSub.getStartDate(),
-                                "endDate", newSub.getEndDate(),
-                                "amount", newSub.getPlan().getPrice()
-                        ),
-                        "note", "After payment, your current ACTIVE subscription will be COMPLETED and this new subscription will be ACTIVE"
-                )
-        );
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAuthority('USER')")

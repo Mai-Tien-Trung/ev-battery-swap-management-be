@@ -1,5 +1,6 @@
 package com.evstation.batteryswap.service.impl;
 
+import com.evstation.batteryswap.dto.response.PlanChangeResponse;
 import com.evstation.batteryswap.dto.response.SubscriptionDetailResponse;
 import com.evstation.batteryswap.entity.*;
 import com.evstation.batteryswap.entity.Invoice;
@@ -33,7 +34,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     @Override
     @Transactional
-    public Subscription changePlan(Long userId, Long vehicleId, Long newPlanId) {
+    public PlanChangeResponse changePlan(Long userId, Long vehicleId, Long newPlanId) {
         // 1. Tìm subscription ACTIVE hiện tại
         Subscription currentSub = subscriptionRepository
                 .findByUserIdAndVehicleIdAndStatus(userId, vehicleId, SubscriptionStatus.ACTIVE)
@@ -78,7 +79,19 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 userId, vehicleId, currentSub.getPlan().getName(), newPlan.getName(),
                 currentSub.getId(), savedNewSub.getId(), invoice.getId(), newPlan.getPrice());
 
-        return savedNewSub;
+        // 7. Build response với cả subscription và invoice info
+        return PlanChangeResponse.builder()
+                .subscriptionId(savedNewSub.getId())
+                .status(savedNewSub.getStatus().name())
+                .planName(newPlan.getName())
+                .startDate(savedNewSub.getStartDate())
+                .endDate(savedNewSub.getEndDate())
+                .amount(newPlan.getPrice())
+                .invoiceId(invoice.getId())
+                .invoiceAmount(invoice.getAmount())
+                .message("Plan change request created. Please pay the invoice to activate new plan.")
+                .note("After payment, your current ACTIVE subscription will be COMPLETED and this new subscription will be ACTIVE")
+                .build();
     }
 
     @Override

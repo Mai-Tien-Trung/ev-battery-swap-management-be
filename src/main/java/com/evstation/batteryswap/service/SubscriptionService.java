@@ -1,12 +1,13 @@
 package com.evstation.batteryswap.service;
 
+import com.evstation.batteryswap.dto.response.PlanChangeResponse;
 import com.evstation.batteryswap.dto.response.SubscriptionDetailResponse;
 import com.evstation.batteryswap.entity.Subscription;
 
 import java.util.List;
 
 public interface SubscriptionService {
-    Subscription changePlan(Long userId, Long vehicleId, Long newPlanId);
+    PlanChangeResponse changePlan(Long userId, Long vehicleId, Long newPlanId);
     void autoRenewSubscriptions();
     
     /**
