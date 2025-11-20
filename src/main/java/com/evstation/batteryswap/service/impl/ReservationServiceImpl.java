@@ -65,7 +65,9 @@ public class ReservationServiceImpl implements ReservationService {
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new RuntimeException("Vehicle not found: " + request.getVehicleId()));
 
-        if (!vehicle.getUser().getId().equals(userId)) {
+        boolean isOwner = vehicle.getUsers().stream()
+                .anyMatch(u -> u.getId().equals(userId));
+        if (!isOwner) {
             throw new RuntimeException("Vehicle does not belong to this user");
         }
 
@@ -164,18 +166,33 @@ public class ReservationServiceImpl implements ReservationService {
 
             List<BatterySerial> batteries = batterySerialRepository.findAllById(request.getBatteryIds());
 
+            // Validate số lượng batteries tìm được
+            if (batteries.size() != request.getBatteryIds().size()) {
+                throw new RuntimeException("Some battery IDs not found");
+            }
+
             // Validate: Pin phải tồn tại, thuộc station, và AVAILABLE
             for (BatterySerial battery : batteries) {
-                if (!battery.getStation().getId().equals(station.getId())) {
-                    throw new RuntimeException(String.format(
-                            "Battery %s does not belong to station %s",
-                            battery.getSerialNumber(), station.getName()
-                    ));
-                }
+                // Check status trước (AVAILABLE mới có station)
                 if (battery.getStatus() != BatteryStatus.AVAILABLE) {
                     throw new RuntimeException(String.format(
                             "Battery %s is not AVAILABLE (current status: %s)",
                             battery.getSerialNumber(), battery.getStatus()
+                    ));
+                }
+                
+                // Check station (chỉ khi status = AVAILABLE)
+                if (battery.getStation() == null) {
+                    throw new RuntimeException(String.format(
+                            "Battery %s has no station assigned",
+                            battery.getSerialNumber()
+                    ));
+                }
+                
+                if (!battery.getStation().getId().equals(station.getId())) {
+                    throw new RuntimeException(String.format(
+                            "Battery %s does not belong to station %s",
+                            battery.getSerialNumber(), station.getName()
                     ));
                 }
             }
@@ -262,7 +279,9 @@ public class ReservationServiceImpl implements ReservationService {
                 .orElseThrow(() -> new RuntimeException("Reservation not found: " + reservationId));
 
         // Validate ownership
-        if (!reservation.getUser().getId().equals(userId)) {
+        boolean isOwner = reservation.getVehicle().getUsers().stream()
+                .anyMatch(u -> u.getId().equals(userId));
+        if (!isOwner) {
             throw new RuntimeException("Reservation does not belong to this user");
         }
 
@@ -290,7 +309,9 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation reservation = reservationRepository.findByIdWithItems(reservationId)
                 .orElseThrow(() -> new RuntimeException("Reservation not found: " + reservationId));
 
-        if (!reservation.getUser().getId().equals(userId)) {
+        boolean isOwner = reservation.getVehicle().getUsers().stream()
+                .anyMatch(u -> u.getId().equals(userId));
+        if (!isOwner) {
             throw new RuntimeException("Reservation does not belong to this user");
         }
 
@@ -401,7 +422,7 @@ public class ReservationServiceImpl implements ReservationService {
                 .station(ReservationResponse.StationInfo.builder()
                         .id(reservation.getStation().getId())
                         .name(reservation.getStation().getName())
-                        .address(reservation.getStation().getAddress())
+                        .address(reservation.getStation().getLocation())
                         .build())
                 .quantity(reservation.getQuantity())
                 .batteries(batteries.stream()

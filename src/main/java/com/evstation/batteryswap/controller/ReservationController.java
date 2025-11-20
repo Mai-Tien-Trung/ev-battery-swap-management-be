@@ -65,7 +65,7 @@ public class ReservationController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ReservationRequest request) {
 
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getId();
 
         log.info("API: CREATE RESERVATION | userId={} | request={}", userId, request);
 
@@ -91,7 +91,7 @@ public class ReservationController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam Long vehicleId) {
 
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getId();
 
         log.info("API: GET ACTIVE RESERVATION | userId={} | vehicleId={}", userId, vehicleId);
 
@@ -120,7 +120,7 @@ public class ReservationController {
     public ResponseEntity<List<ReservationResponse>> getUserReservations(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getId();
 
         log.info("API: GET USER RESERVATIONS | userId={}", userId);
 
@@ -146,7 +146,7 @@ public class ReservationController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Long id) {
 
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getId();
 
         log.info("API: GET RESERVATION DETAIL | userId={} | reservationId={}", userId, id);
 
@@ -179,7 +179,7 @@ public class ReservationController {
             @PathVariable Long id,
             @RequestBody(required = false) CancelReservationRequest request) {
 
-        Long userId = userDetails.getUserId();
+        Long userId = userDetails.getId();
         String reason = (request != null && request.getReason() != null)
                 ? request.getReason()
                 : "User cancelled";
