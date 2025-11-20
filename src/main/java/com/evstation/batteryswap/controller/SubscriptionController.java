@@ -20,7 +20,7 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
 
-    // User yêu cầu đổi gói (không đổi ngay, chỉ set nextPlanId)
+    // User yêu cầu đổi gói (tạo subscription mới PENDING + invoice)
     @PreAuthorize("hasAnyAuthority('USER', 'ADMIN')")
     @PutMapping("/{vehicleId}/change-plan")
     public ResponseEntity<?> requestChangePlan(
@@ -28,7 +28,7 @@ public class SubscriptionController {
             @PathVariable Long vehicleId,
             @RequestBody ChangePlanRequest request
     ) {
-        Subscription updatedSub = subscriptionService.changePlan(
+        Subscription newSub = subscriptionService.changePlan(
                 userDetails.getId(),
                 vehicleId,
                 request.getNewPlanId()
@@ -36,14 +36,16 @@ public class SubscriptionController {
 
         return ResponseEntity.ok(
                 Map.of(
-                        "message", "Change plan request saved. New plan will apply after current subscription ends.",
-                        "subscription", Map.of(
-                                "id", updatedSub.getId(),
-                                "currentPlan", updatedSub.getPlan().getName(),
-                                "nextPlanId", updatedSub.getNextPlanId(),
-                                "status", updatedSub.getStatus(),
-                                "endDate", updatedSub.getEndDate()
-                        )
+                        "message", "Plan change request created. Please pay the invoice to activate new plan.",
+                        "newSubscription", Map.of(
+                                "id", newSub.getId(),
+                                "plan", newSub.getPlan().getName(),
+                                "status", newSub.getStatus().name(),
+                                "startDate", newSub.getStartDate(),
+                                "endDate", newSub.getEndDate(),
+                                "amount", newSub.getPlan().getPrice()
+                        ),
+                        "note", "After payment, your current ACTIVE subscription will be COMPLETED and this new subscription will be ACTIVE"
                 )
         );
     }

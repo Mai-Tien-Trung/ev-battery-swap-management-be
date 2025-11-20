@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -43,10 +44,41 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new IllegalStateException("Xe này đã dùng gói này rồi");
         }
 
-        // 3. Chỉ set nextPlanId, không cancel, không tạo mới ngay
-        currentSub.setNextPlanId(newPlanId);
+        // 3. Kiểm tra có pending invoices không (bao gồm swap overage, renewal, plan change)
+        if (invoiceService.hasPendingInvoices(currentSub.getId())) {
+            throw new IllegalStateException("Phải thanh toán hết invoice trước khi đổi plan");
+        }
 
-        return subscriptionRepository.save(currentSub);
+        // 4. Lấy plan mới
+        SubscriptionPlan newPlan = subscriptionPlanRepository.findById(newPlanId)
+                .orElseThrow(() -> new RuntimeException("Plan không tồn tại: " + newPlanId));
+
+        // 5. Tạo SUBSCRIPTION MỚI với status PENDING
+        Subscription newSub = new Subscription();
+        newSub.setUser(currentSub.getUser());
+        newSub.setVehicle(currentSub.getVehicle());
+        newSub.setPlan(newPlan);
+        newSub.setStatus(SubscriptionStatus.PENDING);  // ⚠️ PENDING cho đến khi thanh toán
+        newSub.setStartDate(LocalDate.now());
+        newSub.setEndDate(LocalDate.now().plusDays(newPlan.getDurationDays()));
+        newSub.setNextPlanId(null);
+        newSub.setEnergyUsedThisMonth(0.0);
+        newSub.setDistanceUsedThisMonth(0.0);
+
+        Subscription savedNewSub = subscriptionRepository.save(newSub);
+
+        // 6. Tạo INVOICE cho plan change
+        Invoice invoice = invoiceService.createPlanChangeInvoice(
+                savedNewSub,
+                newPlan.getPrice(),
+                newPlan.getName()
+        );
+
+        log.info("PLAN CHANGE REQUEST | userId={} | vehicleId={} | oldPlan={} | newPlan={} | oldSubId={} | newSubId={} | invoiceId={} | amount={}₫",
+                userId, vehicleId, currentSub.getPlan().getName(), newPlan.getName(),
+                currentSub.getId(), savedNewSub.getId(), invoice.getId(), newPlan.getPrice());
+
+        return savedNewSub;
     }
 
     @Override
@@ -188,6 +220,55 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         log.info("SUBSCRIPTION ACTIVATED | subscriptionId={} | vehicleId={} | vehicleVin={} | plan={} | batteriesAssigned={}",
                 subscriptionId, vehicle.getId(), vehicle.getVin(), 
                 subscription.getPlan().getName(), availableBatteries.size());
+
+        return activated;
+    }
+
+    @Override
+    @Transactional
+    public Subscription activatePlanChange(Long newSubscriptionId) {
+        // 1. Lấy subscription mới (PENDING)
+        Subscription newSub = subscriptionRepository.findById(newSubscriptionId)
+                .orElseThrow(() -> new RuntimeException("Subscription not found: " + newSubscriptionId));
+
+        // 2. Kiểm tra trạng thái
+        if (newSub.getStatus() != SubscriptionStatus.PENDING) {
+            throw new RuntimeException("Can only activate PENDING subscriptions. Current status: " + newSub.getStatus());
+        }
+
+        // 3. Kiểm tra còn invoice pending không
+        if (invoiceService.hasPendingInvoices(newSubscriptionId)) {
+            throw new RuntimeException("Cannot activate: pending invoices exist for subscription " + newSubscriptionId);
+        }
+
+        // 4. Tìm subscription cũ (ACTIVE) cùng user và vehicle
+        Optional<Subscription> oldSubOpt = subscriptionRepository
+                .findByUserIdAndVehicleIdAndStatus(
+                        newSub.getUser().getId(),
+                        newSub.getVehicle().getId(),
+                        SubscriptionStatus.ACTIVE
+                );
+
+        // 5. Đóng subscription cũ nếu tồn tại
+        if (oldSubOpt.isPresent()) {
+            Subscription oldSub = oldSubOpt.get();
+            oldSub.setStatus(SubscriptionStatus.COMPLETED);
+            oldSub.setNextPlanId(null);
+            subscriptionRepository.save(oldSub);
+
+            log.info("OLD SUBSCRIPTION COMPLETED | oldSubId={} | plan={} | vehicleVin={}",
+                    oldSub.getId(), oldSub.getPlan().getName(), oldSub.getVehicle().getVin());
+        }
+
+        // 6. Kích hoạt subscription mới
+        newSub.setStatus(SubscriptionStatus.ACTIVE);
+        Subscription activated = subscriptionRepository.save(newSub);
+
+        // ⚠️ KHÔNG thêm/bớt batteries - giữ nguyên số pin hiện có
+
+        log.info("PLAN CHANGE ACTIVATED | newSubId={} | plan={} | vehicleVin={} | startDate={} | endDate={}",
+                activated.getId(), activated.getPlan().getName(), activated.getVehicle().getVin(),
+                activated.getStartDate(), activated.getEndDate());
 
         return activated;
     }

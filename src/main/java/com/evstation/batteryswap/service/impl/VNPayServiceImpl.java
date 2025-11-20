@@ -196,6 +196,17 @@ public class VNPayServiceImpl implements VNPayService {
                             invoice.getSubscription().getId(), invoice.getId(), e);
                     // Payment đã thành công nhưng renewal failed - cần manual intervention
                 }
+            } else if ("PLAN_CHANGE".equals(invoice.getInvoiceType())) {
+                // Plan change: activate plan change (đóng subscription cũ, active subscription mới)
+                try {
+                    subscriptionService.activatePlanChange(invoice.getSubscription().getId());
+                    log.info("PLAN CHANGE COMPLETED | subscriptionId={} | invoiceId={} | amount={}",
+                            invoice.getSubscription().getId(), invoice.getId(), invoice.getAmount());
+                } catch (Exception e) {
+                    log.error("Failed to activate plan change after payment | subscriptionId={} | invoiceId={}",
+                            invoice.getSubscription().getId(), invoice.getId(), e);
+                    // Payment đã thành công nhưng plan change failed - cần manual intervention
+                }
             } else if (invoice.getSubscription() != null 
                     && invoice.getSubscription().getStatus() == com.evstation.batteryswap.enums.SubscriptionStatus.PENDING) {
                 // Initial subscription payment: activate subscription

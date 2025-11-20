@@ -32,6 +32,15 @@ public interface InvoiceService {
     Invoice createSubscriptionRenewalInvoice(Subscription subscription, Double planPrice, String planName);
 
     /**
+     * Tạo invoice cho plan change (đổi gói giữa chừng)
+     * @param subscription Subscription mới (PENDING)
+     * @param planPrice Giá của gói mới
+     * @param planName Tên gói mới
+     * @return Invoice đã tạo
+     */
+    Invoice createPlanChangeInvoice(Subscription subscription, Double planPrice, String planName);
+
+    /**
      * Đánh dấu invoice đã thanh toán
      * @param invoiceId ID của invoice
      * @return Invoice đã cập nhật
