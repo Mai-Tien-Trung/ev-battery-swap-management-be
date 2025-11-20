@@ -6,5 +6,6 @@ public enum BatteryStatus {
     PENDING_OUT,       // pin cũ vừa tháo ra, chờ xác nhận
     PENDING_IN,        // pin mới  chờ xác nhận
     DAMAGED,     // bị hỏng
-    MAINTENANCE  // đang bảo trì
+    MAINTENANCE,
+    RESERVED
 }
