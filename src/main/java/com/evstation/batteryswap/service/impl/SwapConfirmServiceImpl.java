@@ -3,6 +3,7 @@ package com.evstation.batteryswap.service.impl;
 import com.evstation.batteryswap.entity.*;
 import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.PlanType;
+import com.evstation.batteryswap.enums.ReservationStatus;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.enums.SwapTransactionStatus;
 import com.evstation.batteryswap.repository.*;
@@ -29,6 +30,7 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
     private final SubscriptionRepository subscriptionRepository;
     private final InvoiceService invoiceService;
     private final PlanTierRateRepository planTierRateRepository;
+    private final ReservationRepository reservationRepository;
 
     @Override
     public String confirmSwap(Long transactionId, Long staffId) {
@@ -138,6 +140,27 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
         tx.setStaff(staff);
         tx.setConfirmedAt(LocalDateTime.now());
         swapTransactionRepository.save(tx);
+
+        // 8️⃣ CHECK & MARK RESERVATION AS USED (nếu có)
+        // Tìm reservation ACTIVE của vehicle tại station này
+        reservationRepository
+                .findByUserIdAndVehicleIdAndStationIdAndStatus(
+                        tx.getUser().getId(), 
+                        tx.getVehicle().getId(), 
+                        station.getId(), 
+                        ReservationStatus.ACTIVE
+                )
+                .ifPresent(reservation -> {
+                    // Mark reservation as USED
+                    reservation.setStatus(ReservationStatus.USED);
+                    reservation.setUsedAt(LocalDateTime.now());
+                    reservation.setSwapTransactionId(tx.getId());
+                    reservationRepository.save(reservation);
+
+                    log.info("RESERVATION USED | reservationId={} | swapTxId={} | userId={} | vehicleId={} | stationId={}",
+                            reservation.getId(), tx.getId(), 
+                            tx.getUser().getId(), tx.getVehicle().getId(), station.getId());
+                });
 
         log.info("CONFIRM_SWAP | staff={} | txId={} | oldBattery={} -> station={} | newBattery={} -> vehicle={}",
                 staff.getUsername(), transactionId,
