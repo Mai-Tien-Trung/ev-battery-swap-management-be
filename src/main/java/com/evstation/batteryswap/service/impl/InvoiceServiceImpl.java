@@ -85,6 +85,31 @@ public class InvoiceServiceImpl implements InvoiceService {
     }
 
     @Override
+    public Invoice createPlanChangeInvoice(Subscription subscription, Double planPrice, String planName) {
+        String description = String.format("Plan Change: %s - %.0f₫", planName, planPrice);
+
+        Invoice invoice = Invoice.builder()
+                .subscription(subscription)  // Link với subscription mới (PENDING)
+                .swapTransaction(null)
+                .amount(planPrice)
+                .status(InvoiceStatus.PENDING)
+                .invoiceType("PLAN_CHANGE")
+                .usageType(null)
+                .overage(null)
+                .rate(null)
+                .description(description)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        Invoice saved = invoiceRepository.save(invoice);
+
+        log.info("INVOICE CREATED | id={} | type=PLAN_CHANGE | subscription={} | plan={} | amount={}₫",
+                saved.getId(), subscription.getId(), planName, planPrice);
+
+        return saved;
+    }
+
+    @Override
     public Invoice markAsPaid(Long invoiceId) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
                 .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));

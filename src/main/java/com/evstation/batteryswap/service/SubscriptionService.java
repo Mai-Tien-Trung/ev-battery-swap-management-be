@@ -22,6 +22,13 @@ public interface SubscriptionService {
      * @return Subscription đã được activate
      */
     Subscription activateSubscription(Long subscriptionId);
+
+    /**
+     * Activate plan change sau khi thanh toán plan change invoice
+     * @param newSubscriptionId ID của subscription mới (PENDING)
+     * @return Subscription mới đã được activate
+     */
+    Subscription activatePlanChange(Long newSubscriptionId);
     
     SubscriptionDetailResponse getSubscriptionDetail(Long userId, Long vehicleId);
     List<SubscriptionDetailResponse> getAllActiveSubscriptions(Long userId);
