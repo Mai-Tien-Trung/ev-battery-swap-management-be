@@ -55,17 +55,26 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * Tìm reservation ACTIVE của vehicle tại trạm cụ thể
      * Dùng khi swap: check xem pin có thuộc reservation không
      * 
+     * ⚠️ EAGER FETCH items để tránh LazyInitializationException
+     * 
      * @param userId ID của user
      * @param vehicleId ID của vehicle
      * @param stationId ID của station
      * @param status Status (ACTIVE)
-     * @return Optional<Reservation>
+     * @return Optional<Reservation> with items loaded
      */
+    @Query("SELECT r FROM Reservation r " +
+           "LEFT JOIN FETCH r.items i " +
+           "LEFT JOIN FETCH i.batterySerial " +
+           "WHERE r.user.id = :userId " +
+           "AND r.vehicle.id = :vehicleId " +
+           "AND r.station.id = :stationId " +
+           "AND r.status = :status")
     Optional<Reservation> findByUserIdAndVehicleIdAndStationIdAndStatus(
-        Long userId, 
-        Long vehicleId, 
-        Long stationId,
-        ReservationStatus status
+        @Param("userId") Long userId, 
+        @Param("vehicleId") Long vehicleId, 
+        @Param("stationId") Long stationId,
+        @Param("status") ReservationStatus status
     );
 
     /**

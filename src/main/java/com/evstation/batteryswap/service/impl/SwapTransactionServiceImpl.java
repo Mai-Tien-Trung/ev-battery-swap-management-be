@@ -5,6 +5,7 @@ import com.evstation.batteryswap.dto.response.SwapResponse;
 import com.evstation.batteryswap.entity.*;
 import com.evstation.batteryswap.enums.BatteryStatus;
 import com.evstation.batteryswap.enums.PlanType;
+import com.evstation.batteryswap.enums.ReservationStatus;
 import com.evstation.batteryswap.enums.SubscriptionStatus;
 import com.evstation.batteryswap.enums.SwapTransactionStatus;
 import com.evstation.batteryswap.repository.*;
@@ -35,6 +36,8 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
     private final SubscriptionRepository subscriptionRepository;
     private final PlanTierRateRepository planTierRateRepository;
     private final SwapTransactionRepository swapTransactionRepository;
+    private final ReservationRepository reservationRepository;
+    private final ReservationItemRepository reservationItemRepository;
 
     @Override
     public SwapResponse processSwap(String username, SwapRequest req) {
@@ -67,10 +70,66 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
         Station station = stationRepository.findById(req.getStationId())
                 .orElseThrow(() -> new RuntimeException("Station not found"));
 
-        //  Lấy pin mới ngẫu nhiên trong trạm
-        BatterySerial newBattery = batterySerialRepository
-                .findRandomAvailableBatteryAtStation(station.getId())
-                .orElseThrow(() -> new RuntimeException("No available battery at this station"));
+        // ===== CHECK RESERVATION - Ưu tiên pin đã đặt trước =====
+        BatterySerial newBattery = null;
+        Reservation activeReservation = null;
+
+        // 1. Tìm reservation ACTIVE của vehicle tại station này
+        Optional<Reservation> reservationOpt = reservationRepository
+                .findByUserIdAndVehicleIdAndStationIdAndStatus(
+                        user.getId(),
+                        vehicle.getId(),
+                        station.getId(),
+                        ReservationStatus.ACTIVE
+                );
+
+        if (reservationOpt.isPresent()) {
+            activeReservation = reservationOpt.get();
+            
+            // 2. Lấy pin TỪ RESERVATION (status = RESERVED)
+            List<BatterySerial> reservedBatteries = activeReservation.getItems().stream()
+                    .map(ReservationItem::getBatterySerial)
+                    .filter(b -> b.getStatus() == BatteryStatus.RESERVED)
+                    .filter(b -> b.getChargePercent() != null && b.getChargePercent() >= 95.0)
+                    .sorted((b1, b2) -> Double.compare(
+                            b2.getChargePercent() != null ? b2.getChargePercent() : 0,
+                            b1.getChargePercent() != null ? b1.getChargePercent() : 0
+                    ))
+                    .toList();
+
+            if (!reservedBatteries.isEmpty()) {
+                BatterySerial selectedBattery = reservedBatteries.get(0);  // Lấy pin tốt nhất từ reservation
+                
+                // ✅ VALIDATE: Pin này PHẢI thuộc reservation items
+                final Long selectedBatteryId = selectedBattery.getId();
+                boolean isBatteryInReservation = activeReservation.getItems().stream()
+                        .anyMatch(item -> item.getBatterySerial().getId().equals(selectedBatteryId));
+                
+                if (!isBatteryInReservation) {
+                    log.error("CRITICAL ERROR: Selected battery NOT in reservation items | battery={} | reservationId={}",
+                            selectedBattery.getSerialNumber(), activeReservation.getId());
+                    throw new RuntimeException("Internal error: Selected battery does not match reservation");
+                }
+                
+                newBattery = selectedBattery;  // Gán vào biến newBattery
+                
+                log.info("SWAP WITH RESERVATION | reservationId={} | battery={} | charge={}% | VALIDATED=true",
+                        activeReservation.getId(), newBattery.getSerialNumber(), newBattery.getChargePercent());
+            } else {
+                log.warn("RESERVATION EXISTS but no suitable RESERVED batteries | reservationId={} | itemsCount={}",
+                        activeReservation.getId(), activeReservation.getItems().size());
+            }
+        }
+
+        // 3. Nếu KHÔNG có reservation hoặc không có pin phù hợp → Lấy pin AVAILABLE ngẫu nhiên
+        if (newBattery == null) {
+            newBattery = batterySerialRepository
+                    .findRandomAvailableBatteryAtStation(station.getId())
+                    .orElseThrow(() -> new RuntimeException("No available battery at this station"));
+            
+            log.info("SWAP WITHOUT RESERVATION | battery={} | charge={}%",
+                    newBattery.getSerialNumber(), newBattery.getChargePercent());
+        }
 
         double newBatteryPercent = Optional.ofNullable(newBattery.getChargePercent()).orElse(100.0);
         if (newBatteryPercent < 95)
@@ -119,9 +178,21 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
 
         swapTransactionRepository.save(tx);
 
+        // ===== MARK RESERVATION AS USED (nếu swap dùng pin từ reservation) =====
+        if (activeReservation != null) {
+            activeReservation.setStatus(ReservationStatus.USED);
+            activeReservation.setUsedAt(LocalDateTime.now());
+            activeReservation.setSwapTransactionId(tx.getId());
+            reservationRepository.save(activeReservation);
+
+            log.info("RESERVATION USED IN SWAP | reservationId={} | swapTxId={} | battery={}",
+                    activeReservation.getId(), tx.getId(), newBattery.getSerialNumber());
+        }
+
         // Ghi log & trả response
-        log.info("SWAP REQUEST | user={} | vehicle={} | oldBattery={} | newBattery={} | status=PENDING_CONFIRM",
-                user.getUsername(), vehicle.getId(), oldBattery.getSerialNumber(), newBattery.getSerialNumber());
+        log.info("SWAP REQUEST | user={} | vehicle={} | oldBattery={} | newBattery={} | hasReservation={} | status=PENDING_CONFIRM",
+                user.getUsername(), vehicle.getId(), oldBattery.getSerialNumber(), 
+                newBattery.getSerialNumber(), activeReservation != null);
 
         return SwapResponse.builder()
                 .message("Swap request created. Waiting for staff confirmation at " + station.getName())

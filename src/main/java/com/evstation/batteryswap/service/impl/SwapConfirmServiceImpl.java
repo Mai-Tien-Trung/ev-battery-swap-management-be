@@ -141,26 +141,7 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
         tx.setConfirmedAt(LocalDateTime.now());
         swapTransactionRepository.save(tx);
 
-        // 8️⃣ CHECK & MARK RESERVATION AS USED (nếu có)
-        // Tìm reservation ACTIVE của vehicle tại station này
-        reservationRepository
-                .findByUserIdAndVehicleIdAndStationIdAndStatus(
-                        tx.getUser().getId(), 
-                        tx.getVehicle().getId(), 
-                        station.getId(), 
-                        ReservationStatus.ACTIVE
-                )
-                .ifPresent(reservation -> {
-                    // Mark reservation as USED
-                    reservation.setStatus(ReservationStatus.USED);
-                    reservation.setUsedAt(LocalDateTime.now());
-                    reservation.setSwapTransactionId(tx.getId());
-                    reservationRepository.save(reservation);
-
-                    log.info("RESERVATION USED | reservationId={} | swapTxId={} | userId={} | vehicleId={} | stationId={}",
-                            reservation.getId(), tx.getId(), 
-                            tx.getUser().getId(), tx.getVehicle().getId(), station.getId());
-                });
+        // NOTE: Reservation đã được mark USED trong processSwap(), không cần check lại ở đây
 
         log.info("CONFIRM_SWAP | staff={} | txId={} | oldBattery={} -> station={} | newBattery={} -> vehicle={}",
                 staff.getUsername(), transactionId,
