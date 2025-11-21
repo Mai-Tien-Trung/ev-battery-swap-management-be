@@ -166,33 +166,18 @@ public class ReservationServiceImpl implements ReservationService {
 
             List<BatterySerial> batteries = batterySerialRepository.findAllById(request.getBatteryIds());
 
-            // Validate số lượng batteries tìm được
-            if (batteries.size() != request.getBatteryIds().size()) {
-                throw new RuntimeException("Some battery IDs not found");
-            }
-
             // Validate: Pin phải tồn tại, thuộc station, và AVAILABLE
             for (BatterySerial battery : batteries) {
-                // Check status trước (AVAILABLE mới có station)
-                if (battery.getStatus() != BatteryStatus.AVAILABLE) {
-                    throw new RuntimeException(String.format(
-                            "Battery %s is not AVAILABLE (current status: %s)",
-                            battery.getSerialNumber(), battery.getStatus()
-                    ));
-                }
-                
-                // Check station (chỉ khi status = AVAILABLE)
-                if (battery.getStation() == null) {
-                    throw new RuntimeException(String.format(
-                            "Battery %s has no station assigned",
-                            battery.getSerialNumber()
-                    ));
-                }
-                
                 if (!battery.getStation().getId().equals(station.getId())) {
                     throw new RuntimeException(String.format(
                             "Battery %s does not belong to station %s",
                             battery.getSerialNumber(), station.getName()
+                    ));
+                }
+                if (battery.getStatus() != BatteryStatus.AVAILABLE) {
+                    throw new RuntimeException(String.format(
+                            "Battery %s is not AVAILABLE (current status: %s)",
+                            battery.getSerialNumber(), battery.getStatus()
                     ));
                 }
             }

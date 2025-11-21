@@ -4,6 +4,7 @@ package com.evstation.batteryswap.enums;
  * Trạng thái của pin trong hệ thống
  */
 public enum BatteryStatus {
+
     AVAILABLE,   // Còn tốt, sẵn sàng đổi hoặc đặt trước
     IN_USE,      // Đang gắn trong xe
     RESERVED,    // Đã được đặt trước, giữ trong 1 giờ (NEW - cho reservation)
