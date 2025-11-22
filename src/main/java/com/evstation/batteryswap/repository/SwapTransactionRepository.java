@@ -12,19 +12,24 @@ import java.util.Optional;
 
 @Repository
 public interface SwapTransactionRepository extends JpaRepository<SwapTransaction, Long> {
-    Optional<SwapTransaction> findTopByBatterySerialOrderByTimestampDesc(BatterySerial batterySerial);
-    List<SwapTransaction> findByStatus(SwapTransactionStatus status);
-    List<SwapTransaction> findByUserUsernameOrderByTimestampDesc(String username);
-    @Query(value = "SELECT EXTRACT(HOUR FROM timestamp) AS hour, COUNT(id) AS count " +
-            "FROM swap_transactions " +
-            "GROUP BY hour " +
-            "ORDER BY count DESC, hour ASC", nativeQuery = true)
-    List<Object[]> findMostFrequentSwapHour();
+        Optional<SwapTransaction> findTopByBatterySerialOrderByTimestampDesc(BatterySerial batterySerial);
 
-    @Query("SELECT s.name as stationName, COUNT(st.id) as swapCount " +
-            "FROM SwapTransaction st " +
-            "JOIN st.station s " +
-            "GROUP BY s.name " +
-            "ORDER BY swapCount DESC")
-    List<Object[]> findSwapsPerStation();
+        List<SwapTransaction> findByStatus(SwapTransactionStatus status);
+
+        List<SwapTransaction> findByUserUsernameOrderByTimestampDesc(String username);
+
+        List<SwapTransaction> findByUserIdOrderByTimestampDesc(Long userId);
+
+        @Query(value = "SELECT EXTRACT(HOUR FROM timestamp) AS hour, COUNT(id) AS count " +
+                        "FROM swap_transactions " +
+                        "GROUP BY hour " +
+                        "ORDER BY count DESC, hour ASC", nativeQuery = true)
+        List<Object[]> findMostFrequentSwapHour();
+
+        @Query("SELECT s.name as stationName, COUNT(st.id) as swapCount " +
+                        "FROM SwapTransaction st " +
+                        "JOIN st.station s " +
+                        "GROUP BY s.name " +
+                        "ORDER BY swapCount DESC")
+        List<Object[]> findSwapsPerStation();
 }

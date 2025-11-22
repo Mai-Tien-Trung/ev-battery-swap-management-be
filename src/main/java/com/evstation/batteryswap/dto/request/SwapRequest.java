@@ -1,6 +1,5 @@
 package com.evstation.batteryswap.dto.request;
 
-
 import lombok.*;
 
 @Data
@@ -10,6 +9,5 @@ import lombok.*;
 public class SwapRequest {
     private Long vehicleId;
     private Long batterySerialId;
-    private Long stationId;     // Trạm đang swap
-    private double endPercent;
+    private Long stationId; // Trạm đang swap
 }

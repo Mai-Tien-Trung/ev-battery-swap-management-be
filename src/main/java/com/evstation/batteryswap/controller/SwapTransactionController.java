@@ -24,18 +24,20 @@ public class SwapTransactionController {
     private final SwapTransactionService swapTransactionService;
     private final SwapTransactionRepository swapTransactionRepository;
 
-
     @PostMapping
-    public ResponseEntity<SwapResponse> processSwap(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody SwapRequest request
-    ) {
-        String username = userDetails.getUsername();
-        SwapResponse response = swapTransactionService.processSwap(username, request);
+    public ResponseEntity<SwapResponse> createSwap(
+            @RequestBody SwapRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        SwapResponse response = swapTransactionService.processSwap(userDetails.getUsername(), request);
         return ResponseEntity.ok(response);
     }
 
-
-
-
+    // 🆕 Endpoint để user xem lịch sử đổi pin
+    @GetMapping("/history")
+    public ResponseEntity<List<com.evstation.batteryswap.dto.response.SwapHistoryResponse>> getSwapHistory(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        List<com.evstation.batteryswap.dto.response.SwapHistoryResponse> history = swapTransactionService
+                .getUserSwapHistory(userDetails.getUsername());
+        return ResponseEntity.ok(history);
+    }
 }
