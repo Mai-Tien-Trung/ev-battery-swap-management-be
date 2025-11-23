@@ -13,11 +13,18 @@ import java.util.Optional;
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
 
     boolean existsByUserIdAndVehicleIdAndStatus(Long userId, Long vehicleId, SubscriptionStatus status);
-    Optional<Subscription> findByUserIdAndVehicleIdAndStatus(Long userId, Long vehicleId, SubscriptionStatus status);
-    List<Subscription> findByEndDate(LocalDate endDate);
-    List<Subscription> findByStatusAndEndDate(SubscriptionStatus status, LocalDate endDate);
-    List<Subscription> findByUserIdAndStatus(Long userId, SubscriptionStatus status); // ✅ thêm dòng này
-    Optional<Subscription> findTopByUserIdAndVehicleIdOrderByStartDateDesc(Long userId, Long vehicleId);
 
+    Optional<Subscription> findByUserIdAndVehicleIdAndStatus(Long userId, Long vehicleId, SubscriptionStatus status);
+
+    Optional<Subscription> findByVehicleIdAndStatus(Long vehicleId, SubscriptionStatus status); // ✅ For admin
+                                                                                                // operations
+
+    List<Subscription> findByEndDate(LocalDate endDate);
+
+    List<Subscription> findByStatusAndEndDate(SubscriptionStatus status, LocalDate endDate);
+
+    List<Subscription> findByUserIdAndStatus(Long userId, SubscriptionStatus status); // ✅ thêm dòng này
+
+    Optional<Subscription> findTopByUserIdAndVehicleIdOrderByStartDateDesc(Long userId, Long vehicleId);
 
 }
