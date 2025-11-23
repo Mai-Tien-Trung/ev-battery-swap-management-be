@@ -1,4 +1,4 @@
-package com.evstation.batteryswap.controller.admin;
+package com.evstation.batteryswap.controller;
 
 import com.evstation.batteryswap.dto.response.VehicleModelResponse;
 import com.evstation.batteryswap.entity.VehicleModel;

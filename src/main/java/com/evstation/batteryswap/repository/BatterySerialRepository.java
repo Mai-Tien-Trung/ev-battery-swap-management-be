@@ -38,6 +38,8 @@ public interface BatterySerialRepository extends JpaRepository<BatterySerial, Lo
         // Lấy tất cả pin theo trạm
         List<BatterySerial> findByStation(Station station);
 
+        List<BatterySerial> findByStationId(Long stationId);
+
         List<BatterySerial> findByStationAndStatus(Station station, BatteryStatus status);
 
         @Query(value = "SELECT * FROM battery_serials WHERE station_id = :stationId AND status = 'AVAILABLE' ORDER BY RANDOM() LIMIT 1", nativeQuery = true)

@@ -52,4 +52,18 @@ public class UserManagementController {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
+
+    // 6. Get all STAFF members
+    @GetMapping("/staff")
+    public ResponseEntity<List<UserManagementResponse>> getAllStaff() {
+        return ResponseEntity.ok(userService.getAllStaff());
+    }
+
+    // 7. Assign staff to station
+    @PutMapping("/staff/{staffId}/assign-station")
+    public ResponseEntity<UserManagementResponse> assignStaffToStation(
+            @PathVariable Long staffId,
+            @RequestBody com.evstation.batteryswap.dto.request.AssignStaffRequest request) {
+        return ResponseEntity.ok(userService.assignStaffToStation(staffId, request));
+    }
 }

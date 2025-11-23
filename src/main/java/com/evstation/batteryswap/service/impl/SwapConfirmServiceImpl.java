@@ -32,6 +32,7 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
     private final InvoiceService invoiceService;
     private final PlanTierRateRepository planTierRateRepository;
     private final ReservationRepository reservationRepository;
+    private final com.evstation.batteryswap.service.BatteryHistoryService batteryHistoryService;
 
     @Override
     public String confirmSwap(Long transactionId, Long staffId,
@@ -132,9 +133,38 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
         newBattery.setVehicle(tx.getVehicle());
         newBattery.setStation(null);
 
+        // 🆕 Increment swap count for both batteries
+        oldBattery.setSwapCount(Optional.ofNullable(oldBattery.getSwapCount()).orElse(0) + 1);
+        newBattery.setSwapCount(Optional.ofNullable(newBattery.getSwapCount()).orElse(0) + 1);
+
         // Lưu cả 2 pin
         List<BatterySerial> batteries = Arrays.asList(oldBattery, newBattery);
         batterySerialRepository.saveAll(batteries);
+
+        // 📜 Log History
+        User staffUser = userRepository.findById(staffId).orElse(null);
+
+        // Log for old battery (returned to station)
+        batteryHistoryService.logEvent(
+                oldBattery,
+                com.evstation.batteryswap.enums.BatteryEventType.SWAPPED,
+                "IN_USE (Vehicle " + tx.getVehicle().getId() + ")",
+                "AVAILABLE (Station " + tx.getStation().getId() + ")",
+                tx.getStation(),
+                null,
+                staffUser,
+                "Swapped out from vehicle " + tx.getVehicle().getVin());
+
+        // Log for new battery (assigned to vehicle)
+        batteryHistoryService.logEvent(
+                newBattery,
+                com.evstation.batteryswap.enums.BatteryEventType.SWAPPED,
+                "AVAILABLE (Station " + tx.getStation().getId() + ")",
+                "IN_USE (Vehicle " + tx.getVehicle().getId() + ")",
+                null,
+                tx.getVehicle(),
+                staffUser,
+                "Swapped into vehicle " + tx.getVehicle().getVin());
 
         // Billing Logic - Cập nhật subscription usage và tính phí
         PlanType planType = sub.getPlan().getPlanType();
