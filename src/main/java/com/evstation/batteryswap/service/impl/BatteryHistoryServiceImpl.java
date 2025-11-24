@@ -1,9 +1,11 @@
 package com.evstation.batteryswap.service.impl;
 
 import com.evstation.batteryswap.dto.response.BatteryHistoryResponse;
+import com.evstation.batteryswap.dto.response.BatteryHistoryWithCountResponse;
 import com.evstation.batteryswap.entity.*;
 import com.evstation.batteryswap.enums.BatteryEventType;
 import com.evstation.batteryswap.repository.BatteryHistoryRepository;
+import com.evstation.batteryswap.repository.BatterySerialRepository;
 import com.evstation.batteryswap.service.BatteryHistoryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 public class BatteryHistoryServiceImpl implements BatteryHistoryService {
 
         private final BatteryHistoryRepository batteryHistoryRepository;
+        private final BatterySerialRepository batterySerialRepository;
 
         @Override
         @Transactional
@@ -67,6 +70,34 @@ public class BatteryHistoryServiceImpl implements BatteryHistoryService {
                                 .collect(Collectors.toList());
         }
 
+        @Override
+        public BatteryHistoryWithCountResponse getBatteryHistoryWithCount(Long batterySerialId) {
+                // Get battery
+                BatterySerial battery = batterySerialRepository.findById(batterySerialId)
+                                .orElseThrow(() -> new RuntimeException("Battery not found"));
+
+                // Get all history
+                List<BatteryHistory> histories = batteryHistoryRepository
+                                .findByBatterySerialIdOrderByCreatedAtDesc(batterySerialId);
+
+                // Count SWAPPED events only (không tính TRANSFERRED)
+                int swapCount = (int) histories.stream()
+                                .filter(h -> h.getEventType() == BatteryEventType.SWAPPED)
+                                .count();
+
+                // Convert to response
+                List<BatteryHistoryResponse> historyResponses = histories.stream()
+                                .map(this::toResponse)
+                                .collect(Collectors.toList());
+
+                return BatteryHistoryWithCountResponse.builder()
+                                .batteryId(battery.getId())
+                                .serialNumber(battery.getSerialNumber())
+                                .totalSwapCount(swapCount)
+                                .history(historyResponses)
+                                .build();
+        }
+
         private BatteryHistoryResponse toResponse(BatteryHistory history) {
                 return BatteryHistoryResponse.builder()
                                 .id(history.getId())
@@ -75,8 +106,6 @@ public class BatteryHistoryServiceImpl implements BatteryHistoryService {
                                 .newValue(history.getNewValue())
                                 .stationId(history.getStation() != null ? history.getStation().getId() : null)
                                 .stationName(history.getStation() != null ? history.getStation().getName() : null)
-                                .vehicleId(history.getVehicle() != null ? history.getVehicle().getId() : null)
-                                .vehicleVin(history.getVehicle() != null ? history.getVehicle().getVin() : null)
                                 .performedByUserId(history.getPerformedBy() != null ? history.getPerformedBy().getId()
                                                 : null)
                                 .performedByUsername(history.getPerformedBy() != null

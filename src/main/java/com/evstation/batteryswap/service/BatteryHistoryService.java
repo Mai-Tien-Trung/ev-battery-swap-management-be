@@ -1,6 +1,7 @@
 package com.evstation.batteryswap.service;
 
 import com.evstation.batteryswap.dto.response.BatteryHistoryResponse;
+import com.evstation.batteryswap.dto.response.BatteryHistoryWithCountResponse;
 import com.evstation.batteryswap.entity.BatterySerial;
 import com.evstation.batteryswap.entity.Station;
 import com.evstation.batteryswap.entity.User;
@@ -27,4 +28,9 @@ public interface BatteryHistoryService {
      * Get history for a specific battery filtered by event type
      */
     List<BatteryHistoryResponse> getBatteryHistoryByEventType(Long batterySerialId, BatteryEventType eventType);
+
+    /**
+     * Get history with swap count summary
+     */
+    BatteryHistoryWithCountResponse getBatteryHistoryWithCount(Long batterySerialId);
 }

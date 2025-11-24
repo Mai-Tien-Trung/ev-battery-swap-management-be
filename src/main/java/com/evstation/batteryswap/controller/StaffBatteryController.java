@@ -98,7 +98,7 @@ public class StaffBatteryController {
          * Get battery history (must be at staff's station)
          */
         @GetMapping("/{batteryId}/history")
-        public ResponseEntity<List<BatteryHistoryResponse>> getBatteryHistory(
+        public ResponseEntity<com.evstation.batteryswap.dto.response.BatteryHistoryWithCountResponse> getBatteryHistory(
                         @PathVariable Long batteryId,
                         @AuthenticationPrincipal CustomUserDetails staffDetails) {
 
@@ -121,10 +121,11 @@ public class StaffBatteryController {
                         throw new RuntimeException("Battery is not at your assigned station");
                 }
 
-                // Get history
-                List<BatteryHistoryResponse> history = batteryHistoryService.getBatteryHistory(batteryId);
+                // Get history with count
+                com.evstation.batteryswap.dto.response.BatteryHistoryWithCountResponse response = batteryHistoryService
+                                .getBatteryHistoryWithCount(batteryId);
 
-                return ResponseEntity.ok(history);
+                return ResponseEntity.ok(response);
         }
 
         @PutMapping("/{batteryId}/soh")
