@@ -17,5 +17,8 @@ public class UserManagementResponse {
     private String phone;
     private String address;
     private Role role;
-}
 
+    // For STAFF: assigned station info
+    private Long assignedStationId;
+    private String assignedStationName;
+}

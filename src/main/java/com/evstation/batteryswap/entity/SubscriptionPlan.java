@@ -33,6 +33,13 @@ public class SubscriptionPlan {
     private Double baseMileage; // km cơ bản đi được
     private Double baseEnergy;
 
+    // SoH range cho pin được phép đổi theo gói
+    @Column(name = "min_soh")
+    private Double minSoH; // SoH tối thiểu của pin được phép đổi
+
+    @Column(name = "max_soh")
+    private Double maxSoH; // SoH tối đa của pin được phép đổi
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PlanType planType;

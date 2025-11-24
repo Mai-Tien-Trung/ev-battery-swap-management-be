@@ -29,207 +29,149 @@ import java.math.BigDecimal;
 @Slf4j
 public class SwapTransactionServiceImpl implements SwapTransactionService {
 
-    private final UserRepository userRepository;
-    private final VehicleRepository vehicleRepository;
-    private final BatterySerialRepository batterySerialRepository;
-    private final StationRepository stationRepository;
-    private final SubscriptionRepository subscriptionRepository;
-    private final PlanTierRateRepository planTierRateRepository;
-    private final SwapTransactionRepository swapTransactionRepository;
-    private final ReservationRepository reservationRepository;
-    private final ReservationItemRepository reservationItemRepository;
+        private final UserRepository userRepository;
+        private final VehicleRepository vehicleRepository;
+        private final BatterySerialRepository batterySerialRepository;
+        private final StationRepository stationRepository;
+        private final SubscriptionRepository subscriptionRepository;
+        private final PlanTierRateRepository planTierRateRepository;
+        private final SwapTransactionRepository swapTransactionRepository;
+        private final ReservationRepository reservationRepository;
+        private final ReservationItemRepository reservationItemRepository;
 
-    @Override
-    public SwapResponse processSwap(String username, SwapRequest req) {
+        @Override
+        public SwapResponse processSwap(String username, SwapRequest req) {
 
-        //  Lấy user
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                // Lấy user
+                User user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Lấy xe
-        Vehicle vehicle = vehicleRepository.findById(req.getVehicleId())
-                .orElseThrow(() -> new RuntimeException("Vehicle not found"));
-        if (!user.getVehicles().contains(vehicle))
-            throw new RuntimeException("Vehicle does not belong to this user");
+                // Lấy xe
+                Vehicle vehicle = vehicleRepository.findById(req.getVehicleId())
+                                .orElseThrow(() -> new RuntimeException("Vehicle not found"));
+                if (!user.getVehicles().contains(vehicle))
+                        throw new RuntimeException("Vehicle does not belong to this user");
 
-        //  Kiểm tra subscription ACTIVE
-        Subscription sub = subscriptionRepository
-                .findByUserIdAndVehicleIdAndStatus(user.getId(), vehicle.getId(), SubscriptionStatus.ACTIVE)
-                .orElseThrow(() -> new RuntimeException("No active subscription for this vehicle"));
-        PlanType planType = sub.getPlan().getPlanType();
+                // Kiểm tra subscription ACTIVE
+                Subscription sub = subscriptionRepository
+                                .findByUserIdAndVehicleIdAndStatus(user.getId(), vehicle.getId(),
+                                                SubscriptionStatus.ACTIVE)
+                                .orElseThrow(() -> new RuntimeException("No active subscription for this vehicle"));
 
-        //  Lấy pin cũ
-        BatterySerial oldBattery = batterySerialRepository.findById(req.getBatterySerialId())
-                .orElseThrow(() -> new RuntimeException("Old battery not found"));
-        if (oldBattery.getVehicle() == null || !oldBattery.getVehicle().getId().equals(vehicle.getId()))
-            throw new RuntimeException("This battery does not belong to the selected vehicle");
-        if (oldBattery.getStatus() != BatteryStatus.IN_USE)
-            throw new RuntimeException("This battery is not currently in use");
+                // Lấy pin cũ
+                BatterySerial oldBattery = batterySerialRepository.findById(req.getBatterySerialId())
+                                .orElseThrow(() -> new RuntimeException("Old battery not found"));
+                if (oldBattery.getVehicle() == null || !oldBattery.getVehicle().getId().equals(vehicle.getId()))
+                        throw new RuntimeException("This battery does not belong to the selected vehicle");
+                if (oldBattery.getStatus() != BatteryStatus.IN_USE)
+                        throw new RuntimeException("This battery is not currently in use");
 
-        // ⃣Lấy trạm
-        Station station = stationRepository.findById(req.getStationId())
-                .orElseThrow(() -> new RuntimeException("Station not found"));
+                // Lấy trạm
+                Station station = stationRepository.findById(req.getStationId())
+                                .orElseThrow(() -> new RuntimeException("Station not found"));
 
-        // ===== CHECK RESERVATION - Ưu tiên pin đã đặt trước =====
-        BatterySerial newBattery = null;
-        Reservation activeReservation = null;
+                // Đặt trạng thái tạm cho pin cũ (chờ staff xác nhận)
+                oldBattery.setStatus(BatteryStatus.PENDING_OUT);
+                batterySerialRepository.save(oldBattery);
 
-        // 1. Tìm reservation ACTIVE của vehicle tại station này
-        Optional<Reservation> reservationOpt = reservationRepository
-                .findByUserIdAndVehicleIdAndStationIdAndStatus(
-                        user.getId(),
-                        vehicle.getId(),
-                        station.getId(),
-                        ReservationStatus.ACTIVE
-                );
+                // Lưu transaction (chưa có thông tin pin mới, chưa tính degradation)
+                SwapTransaction tx = SwapTransaction.builder()
+                                .user(user)
+                                .vehicle(vehicle)
+                                .batterySerial(oldBattery)
+                                .station(station)
+                                .startPercent(Optional.ofNullable(oldBattery.getChargePercent()).orElse(100.0))
+                                .timestamp(LocalDateTime.now())
+                                .status(SwapTransactionStatus.PENDING_CONFIRM)
+                                .build();
 
-        if (reservationOpt.isPresent()) {
-            activeReservation = reservationOpt.get();
-            
-            // 2. Lấy pin TỪ RESERVATION (status = RESERVED)
-            List<BatterySerial> reservedBatteries = activeReservation.getItems().stream()
-                    .map(ReservationItem::getBatterySerial)
-                    .filter(b -> b.getStatus() == BatteryStatus.RESERVED)
-                    .filter(b -> b.getChargePercent() != null && b.getChargePercent() >= 95.0)
-                    .sorted((b1, b2) -> Double.compare(
-                            b2.getChargePercent() != null ? b2.getChargePercent() : 0,
-                            b1.getChargePercent() != null ? b1.getChargePercent() : 0
-                    ))
-                    .toList();
+                swapTransactionRepository.save(tx);
 
-            if (!reservedBatteries.isEmpty()) {
-                BatterySerial selectedBattery = reservedBatteries.get(0);  // Lấy pin tốt nhất từ reservation
-                
-                // ✅ VALIDATE: Pin này PHẢI thuộc reservation items
-                final Long selectedBatteryId = selectedBattery.getId();
-                boolean isBatteryInReservation = activeReservation.getItems().stream()
-                        .anyMatch(item -> item.getBatterySerial().getId().equals(selectedBatteryId));
-                
-                if (!isBatteryInReservation) {
-                    log.error("CRITICAL ERROR: Selected battery NOT in reservation items | battery={} | reservationId={}",
-                            selectedBattery.getSerialNumber(), activeReservation.getId());
-                    throw new RuntimeException("Internal error: Selected battery does not match reservation");
+                // Ghi log
+                log.info("SWAP REQUEST | user={} | vehicle={} | oldBattery={} | station={} | status=PENDING_CONFIRM",
+                                user.getUsername(), vehicle.getId(), oldBattery.getSerialNumber(), station.getName());
+
+                return SwapResponse.builder()
+                                .message("Swap request created. Waiting for staff to select battery and confirm at "
+                                                + station.getName())
+                                .oldSerialNumber(oldBattery.getSerialNumber())
+                                .oldSoH(Optional.ofNullable(oldBattery.getStateOfHealth()).orElse(100.0))
+                                .status(SwapTransactionStatus.PENDING_CONFIRM.name())
+                                .requestedAt(tx.getTimestamp()) // Thời gian gửi yêu cầu
+                                .build();
+        }
+
+        @Override
+        public List<Map<String, Object>> getMostFrequentSwapHour() {
+                List<Object[]> results = swapTransactionRepository.findMostFrequentSwapHour();
+
+                return results.stream().map(arr -> {
+                        Map<String, Object> map = new HashMap<>();
+
+                        // sửa ở đây:
+                        BigDecimal hourBigDecimal = (BigDecimal) arr[0];
+                        Long count = (Long) arr[1];
+
+                        map.put("hour", hourBigDecimal.intValue()); // Giờ
+                        map.put("count", count);
+                        return map;
+                }).collect(Collectors.toList());
+        }
+
+        @Override
+        public List<Map<String, Object>> getSwapsPerStation() {
+                List<Object[]> results = swapTransactionRepository.findSwapsPerStation();
+                return results.stream().map(arr -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("stationName", (String) arr[0]);
+                        map.put("swapCount", (Long) arr[1]);
+                        return map;
+                }).collect(Collectors.toList());
+        }
+
+        @Override
+        public List<com.evstation.batteryswap.dto.response.SwapHistoryResponse> getUserSwapHistory(String username) {
+                // Lấy user
+                User user = userRepository.findByUsername(username)
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                // Lấy tất cả swap transactions của user (COMPLETED và REJECTED)
+                List<SwapTransaction> transactions = swapTransactionRepository
+                                .findByUserIdOrderByTimestampDesc(user.getId());
+
+                // Convert sang SwapHistoryResponse
+                return transactions.stream()
+                                .filter(tx -> tx.getStatus() == SwapTransactionStatus.COMPLETED ||
+                                                tx.getStatus() == SwapTransactionStatus.REJECTED)
+                                .map(tx -> com.evstation.batteryswap.dto.response.SwapHistoryResponse.builder()
+                                                .id(tx.getId())
+                                                .stationName(tx.getStation().getName())
+                                                .oldBatterySerial(tx.getBatterySerial().getSerialNumber())
+                                                .newBatterySerial(findNewBatterySerial(tx))
+                                                .energyUsed(tx.getEnergyUsed())
+                                                .distance(tx.getDistance())
+                                                .cost(tx.getCost())
+                                                .status(tx.getStatus().name())
+                                                .timestamp(tx.getTimestamp())
+                                                .confirmedAt(tx.getConfirmedAt())
+                                                .build())
+                                .collect(Collectors.toList());
+        }
+
+        private String findNewBatterySerial(SwapTransaction tx) {
+                // Tìm pin mới đã được gắn vào xe sau swap
+                if (tx.getStatus() == SwapTransactionStatus.COMPLETED) {
+                        List<BatterySerial> currentBatteries = batterySerialRepository
+                                        .findByVehicleAndStatus(tx.getVehicle(), BatteryStatus.IN_USE);
+                        if (!currentBatteries.isEmpty()) {
+                                // Lấy pin không phải là pin cũ
+                                return currentBatteries.stream()
+                                                .filter(b -> !b.getId().equals(tx.getBatterySerial().getId()))
+                                                .findFirst()
+                                                .map(BatterySerial::getSerialNumber)
+                                                .orElse("N/A");
+                        }
                 }
-                
-                newBattery = selectedBattery;  // Gán vào biến newBattery
-                
-                log.info("SWAP WITH RESERVATION | reservationId={} | battery={} | charge={}% | VALIDATED=true",
-                        activeReservation.getId(), newBattery.getSerialNumber(), newBattery.getChargePercent());
-            } else {
-                log.warn("RESERVATION EXISTS but no suitable RESERVED batteries | reservationId={} | itemsCount={}",
-                        activeReservation.getId(), activeReservation.getItems().size());
-            }
+                return "N/A";
         }
-
-        // 3. Nếu KHÔNG có reservation hoặc không có pin phù hợp → Lấy pin AVAILABLE ngẫu nhiên
-        if (newBattery == null) {
-            newBattery = batterySerialRepository
-                    .findRandomAvailableBatteryAtStation(station.getId())
-                    .orElseThrow(() -> new RuntimeException("No available battery at this station"));
-            
-            log.info("SWAP WITHOUT RESERVATION | battery={} | charge={}%",
-                    newBattery.getSerialNumber(), newBattery.getChargePercent());
-        }
-
-        double newBatteryPercent = Optional.ofNullable(newBattery.getChargePercent()).orElse(100.0);
-        if (newBatteryPercent < 95)
-            throw new RuntimeException("No fully charged battery available at this station");
-
-        // Tính toán năng lượng hao mòn pin cũ
-        double designCapacityWh = oldBattery.getBattery().getDesignCapacity();
-        double startPercent = Optional.ofNullable(oldBattery.getChargePercent()).orElse(100.0);
-        double endPercent = req.getEndPercent();
-        double depth = Math.max(0, startPercent - endPercent);
-        double energyUsedWh = (depth / 100.0) * designCapacityWh;
-        double energyUsedKWh = energyUsedWh / 1000.0;
-        double cycleUsed = depth / 100.0;
-        double degradation = cycleUsed * 0.75;
-        double oldSoH = Optional.ofNullable(oldBattery.getStateOfHealth()).orElse(100.0);
-        double newSoH = Math.max(0, oldSoH - degradation);
-        oldBattery.setStateOfHealth(newSoH);
-        oldBattery.setTotalCycleCount(
-                Optional.ofNullable(oldBattery.getTotalCycleCount()).orElse(0.0) + cycleUsed
-        );
-
-        double efficiencyKmPerKwh = Optional.ofNullable(vehicle.getEfficiencyKmPerKwh()).orElse(20.0);
-        double distanceTraveled = energyUsedKWh * efficiencyKmPerKwh;
-
-        // Đặt trạng thái tạm (pending)
-        oldBattery.setStatus(BatteryStatus.PENDING_OUT);
-        newBattery.setStatus(BatteryStatus.PENDING_IN);
-        batterySerialRepository.saveAll(java.util.List.of(oldBattery, newBattery));
-
-        //  Lưu transaction (chưa đổi pin thực tế)
-        SwapTransaction tx = SwapTransaction.builder()
-                .user(user)
-                .vehicle(vehicle)
-                .batterySerial(oldBattery)
-                .station(station)
-                .energyUsed(energyUsedKWh)
-                .distance(distanceTraveled)
-                .cost(0.0)
-                .startPercent(startPercent)
-                .endPercent(endPercent)
-                .depthOfDischarge(depth)
-                .degradationThisSwap(degradation)
-                .timestamp(LocalDateTime.now())
-                .status(SwapTransactionStatus.PENDING_CONFIRM)
-                .build();
-
-        swapTransactionRepository.save(tx);
-
-        // ===== MARK RESERVATION AS USED (nếu swap dùng pin từ reservation) =====
-        if (activeReservation != null) {
-            activeReservation.setStatus(ReservationStatus.USED);
-            activeReservation.setUsedAt(LocalDateTime.now());
-            activeReservation.setSwapTransactionId(tx.getId());
-            reservationRepository.save(activeReservation);
-
-            log.info("RESERVATION USED IN SWAP | reservationId={} | swapTxId={} | battery={}",
-                    activeReservation.getId(), tx.getId(), newBattery.getSerialNumber());
-        }
-
-        // Ghi log & trả response
-        log.info("SWAP REQUEST | user={} | vehicle={} | oldBattery={} | newBattery={} | hasReservation={} | status=PENDING_CONFIRM",
-                user.getUsername(), vehicle.getId(), oldBattery.getSerialNumber(), 
-                newBattery.getSerialNumber(), activeReservation != null);
-
-        return SwapResponse.builder()
-                .message("Swap request created. Waiting for staff confirmation at " + station.getName())
-                .oldSerialNumber(oldBattery.getSerialNumber())
-                .newSerialNumber(newBattery.getSerialNumber())
-                .oldSoH(oldSoH)
-                .newSoH(newSoH)
-                .depthOfDischarge(depth)
-                .energyUsed(energyUsedKWh)
-                .distanceUsed(distanceTraveled)
-                .status(SwapTransactionStatus.PENDING_CONFIRM.name())
-                .build();
-    }
-    @Override
-    public List<Map<String, Object>> getMostFrequentSwapHour() {
-        List<Object[]> results = swapTransactionRepository.findMostFrequentSwapHour();
-
-        return results.stream().map(arr -> {
-            Map<String, Object> map = new HashMap<>();
-
-            //  sửa ở đây:
-            BigDecimal hourBigDecimal = (BigDecimal) arr[0];
-            Long count = (Long) arr[1];
-
-            map.put("hour", hourBigDecimal.intValue()); // Giờ
-            map.put("count", count);
-            return map;
-        }).collect(Collectors.toList());
-    }
-    @Override
-    public List<Map<String, Object>> getSwapsPerStation() {
-        List<Object[]> results = swapTransactionRepository.findSwapsPerStation();
-        return results.stream().map(arr -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("stationName", (String) arr[0]);
-            map.put("swapCount", (Long) arr[1]);
-            return map;
-        }).collect(Collectors.toList());
-    }
 }

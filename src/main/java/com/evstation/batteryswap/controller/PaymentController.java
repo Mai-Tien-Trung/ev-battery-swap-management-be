@@ -125,19 +125,6 @@ public class PaymentController {
         }
     }
 
-    /**
-     * Query trạng thái thanh toán của invoice
-     * 
-     * GET /api/payment/status/{invoiceId}
-     * 
-     * Response:
-     * {
-     *   "invoiceId": 5,
-     *   "invoiceStatus": "PAID",
-     *   "paymentStatus": "SUCCESS",
-     *   "transactionRef": "INV5_1699350000000"
-     * }
-     */
     @GetMapping("/status/{invoiceId}")
     public ResponseEntity<?> getPaymentStatus(@PathVariable Long invoiceId) {
         // TODO: Implement nếu cần query status từ InvoiceService

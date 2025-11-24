@@ -24,12 +24,13 @@ public class BatterySerial {
     @Enumerated(EnumType.STRING)
     private BatteryStatus status;
 
-
-
     private Double initialCapacity;
     private Double currentCapacity;
-    private Double stateOfHealth;     // SoH = (current / initial) * 100 (%)
+    private Double stateOfHealth; // SoH = (current / initial) * 100 (%)
     private Double totalCycleCount = 0.0; // Tổng số chu kỳ sử dụng tương đương (EFC)
+
+    @Column(name = "swap_count")
+    private Integer swapCount = 0; // Số lần swap thành công
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "battery_id")
