@@ -97,6 +97,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                                 .oldSerialNumber(oldBattery.getSerialNumber())
                                 .oldSoH(Optional.ofNullable(oldBattery.getStateOfHealth()).orElse(100.0))
                                 .status(SwapTransactionStatus.PENDING_CONFIRM.name())
+                                .requestedAt(tx.getTimestamp()) // Thời gian gửi yêu cầu
                                 .build();
         }
 

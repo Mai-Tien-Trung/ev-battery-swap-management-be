@@ -3,6 +3,8 @@ package com.evstation.batteryswap.dto.response;
 import com.evstation.batteryswap.enums.BatteryStatus;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -20,6 +22,6 @@ public class SwapResponse {
     private double distanceUsed;
     private double cost;
     private Double oldBatteryChargedPercent;
-
     private String status;
+    private LocalDateTime requestedAt; // Thời gian user gửi yêu cầu swap
 }
