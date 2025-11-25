@@ -24,5 +24,6 @@ public class BatteryHistoryResponse {
     private Long performedByUserId;
     private String performedByUsername;
     private String notes;
+    private Double soh; // State of Health (%) at the time of the event
     private LocalDateTime createdAt;
 }

@@ -48,6 +48,9 @@ public class BatteryHistory {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column
+    private Double soh; // State of Health (%) at the time of the event
+
     @Column(nullable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 

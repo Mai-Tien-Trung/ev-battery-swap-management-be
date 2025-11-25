@@ -17,7 +17,7 @@ public interface BatteryHistoryService {
      */
     void logEvent(BatterySerial battery, BatteryEventType eventType,
             String oldValue, String newValue,
-            Station station, Vehicle vehicle, User performedBy, String notes);
+            Station station, Vehicle vehicle, User performedBy, String notes, Double soh);
 
     /**
      * Get history for a specific battery

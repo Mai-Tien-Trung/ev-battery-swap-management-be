@@ -176,7 +176,8 @@ public class StaffBatteryController {
                                 assignedStation,
                                 null,
                                 staff,
-                                String.format("Staff updated SoH from %.1f%% to %.1f%%", oldSoH, request.getNewSoH()));
+                                String.format("Staff updated SoH from %.1f%% to %.1f%%", oldSoH, request.getNewSoH()),
+                                request.getNewSoH()); // New SoH value after update
 
                 log.info("STAFF UPDATE BATTERY SOH | staffId={} | batteryId={} | serialNumber={} | oldSoH={}% | newSoH={}% | station={}",
                                 staff.getId(), batteryId, battery.getSerialNumber(), oldSoH, request.getNewSoH(),

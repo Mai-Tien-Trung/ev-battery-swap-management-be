@@ -153,7 +153,8 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
                 tx.getStation(),
                 null,
                 staffUser,
-                "Swapped out from vehicle " + tx.getVehicle().getVin());
+                "Swapped out from vehicle " + tx.getVehicle().getVin(),
+                newSoH); // SoH after degradation
 
         // Log for new battery (assigned to vehicle)
         batteryHistoryService.logEvent(
@@ -164,7 +165,8 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
                 null,
                 tx.getVehicle(),
                 staffUser,
-                "Swapped into vehicle " + tx.getVehicle().getVin());
+                "Swapped into vehicle " + tx.getVehicle().getVin(),
+                batterySoH); // SoH of new battery
 
         // Billing Logic - Cập nhật subscription usage và tính phí
         PlanType planType = sub.getPlan().getPlanType();
