@@ -153,6 +153,123 @@ public class SwapConfirmController {
                 return ResponseEntity.ok(pending);
         }
 
+        // 📋 Xem danh sách swap đang chờ xác nhận có đặt lịch (reservation)
+        @GetMapping("/pending-reservation")
+        public ResponseEntity<List<com.evstation.batteryswap.dto.response.PendingSwapResponse>> getPendingSwapsWithReservation(
+                @AuthenticationPrincipal CustomUserDetails staff) {
+
+                // Get staff user and verify assigned station
+                com.evstation.batteryswap.entity.User staffUser = userRepository.findById(staff.getId())
+                        .orElseThrow(() -> new RuntimeException("Staff not found"));
+
+                com.evstation.batteryswap.entity.Station assignedStation = staffUser.getAssignedStation();
+                if (assignedStation == null) {
+                        throw new RuntimeException("Staff is not assigned to any station");
+                }
+
+                // Only get pending swaps at staff's assigned station
+                List<com.evstation.batteryswap.dto.response.PendingSwapResponse> pending = swapTransactionRepository
+                        .findByStatus(SwapTransactionStatus.PENDING_CONFIRM)
+                        .stream()
+                        .filter(tx -> tx.getStation().getId().equals(assignedStation.getId())) // Filter by staff's station
+                        .map(tx -> {
+                                // Lấy subscription để biết SoH range
+                                com.evstation.batteryswap.entity.Subscription sub = subscriptionRepository
+                                        .findByUserIdAndVehicleIdAndStatus(
+                                                tx.getUser().getId(),
+                                                tx.getVehicle().getId(),
+                                                com.evstation.batteryswap.enums.SubscriptionStatus.ACTIVE)
+                                        .orElse(null);
+
+                                // Lấy available batteries tại station, filter theo SoH range
+                                List<com.evstation.batteryswap.dto.response.AvailableBatteryInfo> availableBatteries = batterySerialRepository
+                                        .findByStationAndStatus(
+                                                tx.getStation(),
+                                                com.evstation.batteryswap.enums.BatteryStatus.AVAILABLE)
+                                        .stream()
+                                        .filter(b -> b.getChargePercent() != null && b.getChargePercent() >= 95.0)
+                                        .filter(b -> {
+                                                // Filter theo SoH range nếu có subscription
+                                                if (sub != null && sub.getPlan().getMinSoH() != null
+                                                        && sub.getPlan().getMaxSoH() != null) {
+                                                        Double soh = java.util.Optional.ofNullable(b.getStateOfHealth())
+                                                                .orElse(100.0);
+                                                        return soh >= sub.getPlan().getMinSoH()
+                                                                && soh <= sub.getPlan().getMaxSoH();
+                                                }
+                                                return true; // Nếu không có SoH range thì show all
+                                        })
+                                        .map(b -> com.evstation.batteryswap.dto.response.AvailableBatteryInfo
+                                                .builder()
+                                                .id(b.getId())
+                                                .serialNumber(b.getSerialNumber())
+                                                .chargePercent(b.getChargePercent())
+                                                .stateOfHealth(b.getStateOfHealth())
+                                                .totalCycleCount(b.getTotalCycleCount())
+                                                .batteryModel(b.getBattery().getName())
+                                                .build())
+                                        .collect(java.util.stream.Collectors.toList());
+
+                                // Lấy thông tin reservation nếu có
+                                com.evstation.batteryswap.dto.response.PendingSwapResponse.ReservationInfo reservationInfo = null;
+                                if (tx.getReservation() != null) {
+                                        com.evstation.batteryswap.entity.Reservation reservation = tx.getReservation();
+                                        
+                                        // Map reservation batteries
+                                        List<com.evstation.batteryswap.dto.response.PendingSwapResponse.ReservationInfo.ReservedBatteryDetail> reservedBatteries = reservation
+                                                .getItems()
+                                                .stream()
+                                                .map(item -> {
+                                                        com.evstation.batteryswap.entity.BatterySerial battery = item.getBatterySerial();
+                                                        return com.evstation.batteryswap.dto.response.PendingSwapResponse.ReservationInfo.ReservedBatteryDetail
+                                                                .builder()
+                                                                .batterySerialId(battery.getId())
+                                                                .serialNumber(battery.getSerialNumber())
+                                                                .batteryModel(battery.getBattery().getName())
+                                                                .chargePercent(battery.getChargePercent())
+                                                                .stateOfHealth(battery.getStateOfHealth())
+                                                                .totalCycleCount(battery.getTotalCycleCount())
+                                                                .status(battery.getStatus().name())
+                                                                .build();
+                                                })
+                                                .collect(java.util.stream.Collectors.toList());
+
+                                        reservationInfo = com.evstation.batteryswap.dto.response.PendingSwapResponse.ReservationInfo
+                                                .builder()
+                                                .reservationId(reservation.getId())
+                                                .status(reservation.getStatus().name())
+                                                .quantity(reservation.getQuantity())
+                                                .usedCount(reservation.getUsedCount())
+                                                .reservedAt(reservation.getReservedAt())
+                                                .expireAt(reservation.getExpireAt())
+                                                .remainingMinutes(reservation.getRemainingMinutes())
+                                                .batteries(reservedBatteries)
+                                                .build();
+                                }
+
+                                return com.evstation.batteryswap.dto.response.PendingSwapResponse.builder()
+                                        .id(tx.getId())
+                                        .username(tx.getUser().getUsername())
+                                        .vehicleId(tx.getVehicle().getId())
+                                        .vehicleVin(tx.getVehicle().getVin())
+                                        .stationName(tx.getStation().getName())
+                                        .batterySerialNumber(tx.getBatterySerial().getSerialNumber())
+                                        .oldBatterySerialNumber(tx.getBatterySerial().getSerialNumber())
+                                        .oldBatteryChargePercent(tx.getBatterySerial().getChargePercent())
+                                        .oldBatterySoH(tx.getBatterySerial().getStateOfHealth())
+                                        .availableBatteries(availableBatteries)
+                                        .reservation(reservationInfo)
+                                        .status(tx.getStatus().name())
+                                        .timestamp(tx.getTimestamp().toString())
+                                        .build();
+                        })
+                        .toList();
+
+                if (pending.isEmpty())
+                        return ResponseEntity.noContent().build();
+                return ResponseEntity.ok(pending);
+        }
+
         /**
          * 📦 Lấy danh sách pin từ reservation để staff confirm swap
          * Dùng khi user có đặt lịch trước khi đến đổi pin
