@@ -25,6 +25,7 @@ public class SwapConfirmController {
         private final com.evstation.batteryswap.repository.SubscriptionRepository subscriptionRepository;
         private final com.evstation.batteryswap.repository.BatterySerialRepository batterySerialRepository;
         private final com.evstation.batteryswap.repository.UserRepository userRepository;
+        private final com.evstation.batteryswap.repository.ReservationRepository reservationRepository;
 
         // ✅ Nhân viên xác nhận swap
         @PutMapping("/{transactionId}/confirm")
@@ -150,5 +151,155 @@ public class SwapConfirmController {
                 if (pending.isEmpty())
                         return ResponseEntity.noContent().build();
                 return ResponseEntity.ok(pending);
+        }
+
+        /**
+         * 📦 Lấy danh sách pin từ reservation để staff confirm swap
+         * Dùng khi user có đặt lịch trước khi đến đổi pin
+         * 
+         * @param reservationId ID của reservation
+         * @return Danh sách pin đã đặt trong reservation
+         */
+        @GetMapping("/reservation/{reservationId}/batteries")
+        public ResponseEntity<com.evstation.batteryswap.dto.response.ReservationBatteriesResponse> getReservationBatteries(
+                @PathVariable Long reservationId,
+                @AuthenticationPrincipal CustomUserDetails staff) {
+
+                // Get reservation
+                com.evstation.batteryswap.entity.Reservation reservation = reservationRepository
+                        .findById(reservationId)
+                        .orElseThrow(() -> new RuntimeException("Reservation not found"));
+
+                // Verify staff can access this reservation (same station)
+                com.evstation.batteryswap.entity.User staffUser = userRepository.findById(staff.getId())
+                        .orElseThrow(() -> new RuntimeException("Staff not found"));
+
+                com.evstation.batteryswap.entity.Station assignedStation = staffUser.getAssignedStation();
+                if (assignedStation == null) {
+                        throw new RuntimeException("Staff is not assigned to any station");
+                }
+
+                if (!reservation.getStation().getId().equals(assignedStation.getId())) {
+                        throw new RuntimeException(
+                                "Cannot access reservation from other station. This reservation is at: "
+                                        + reservation.getStation().getName());
+                }
+
+                // Map reservation items to battery info
+                List<com.evstation.batteryswap.dto.response.ReservationBatteriesResponse.ReservedBatteryInfo> batteries = reservation
+                        .getItems()
+                        .stream()
+                        .map(item -> {
+                                com.evstation.batteryswap.entity.BatterySerial battery = item.getBatterySerial();
+                                return com.evstation.batteryswap.dto.response.ReservationBatteriesResponse.ReservedBatteryInfo
+                                        .builder()
+                                        .batterySerialId(battery.getId())
+                                        .serialNumber(battery.getSerialNumber())
+                                        .batteryModel(battery.getBattery().getName())
+                                        .chargePercent(battery.getChargePercent())
+                                        .stateOfHealth(battery.getStateOfHealth())
+                                        .totalCycleCount(battery.getTotalCycleCount())
+                                        .status(battery.getStatus().name())
+                                        .build();
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+
+                // Build response
+                com.evstation.batteryswap.dto.response.ReservationBatteriesResponse response = com.evstation.batteryswap.dto.response.ReservationBatteriesResponse
+                        .builder()
+                        .reservationId(reservation.getId())
+                        .username(reservation.getUser().getUsername())
+                        .vehicleVin(reservation.getVehicle().getVin())
+                        .stationName(reservation.getStation().getName())
+                        .status(reservation.getStatus().name())
+                        .quantity(reservation.getQuantity())
+                        .usedCount(reservation.getUsedCount())
+                        .reservedAt(reservation.getReservedAt())
+                        .expireAt(reservation.getExpireAt())
+                        .remainingMinutes(reservation.getRemainingMinutes())
+                        .batteries(batteries)
+                        .build();
+
+                return ResponseEntity.ok(response);
+        }
+
+        /**
+         * 📦 Lấy danh sách pin từ reservation của một transaction
+         * Tiện hơn khi staff đang xem transaction và cần biết có reservation không
+         * 
+         * @param transactionId ID của swap transaction
+         * @return Danh sách pin đã đặt (nếu có reservation), null nếu walk-in
+         */
+        @GetMapping("/{transactionId}/reservation-batteries")
+        public ResponseEntity<?> getReservationBatteriesByTransaction(
+                @PathVariable Long transactionId,
+                @AuthenticationPrincipal CustomUserDetails staff) {
+
+                // Get transaction
+                SwapTransaction transaction = swapTransactionRepository.findById(transactionId)
+                        .orElseThrow(() -> new RuntimeException("Transaction not found"));
+
+                // Verify staff can access this transaction (same station)
+                com.evstation.batteryswap.entity.User staffUser = userRepository.findById(staff.getId())
+                        .orElseThrow(() -> new RuntimeException("Staff not found"));
+
+                com.evstation.batteryswap.entity.Station assignedStation = staffUser.getAssignedStation();
+                if (assignedStation == null) {
+                        throw new RuntimeException("Staff is not assigned to any station");
+                }
+
+                if (!transaction.getStation().getId().equals(assignedStation.getId())) {
+                        throw new RuntimeException(
+                                "Cannot access transaction from other station. This transaction is at: "
+                                        + transaction.getStation().getName());
+                }
+
+                // Check if transaction has reservation
+                if (transaction.getReservation() == null) {
+                        return ResponseEntity.ok(java.util.Map.of(
+                                "hasReservation", false,
+                                "message", "This is a walk-in swap (no reservation)"));
+                }
+
+                com.evstation.batteryswap.entity.Reservation reservation = transaction.getReservation();
+
+                // Map reservation items to battery info
+                List<com.evstation.batteryswap.dto.response.ReservationBatteriesResponse.ReservedBatteryInfo> batteries = reservation
+                        .getItems()
+                        .stream()
+                        .map(item -> {
+                                com.evstation.batteryswap.entity.BatterySerial battery = item.getBatterySerial();
+                                return com.evstation.batteryswap.dto.response.ReservationBatteriesResponse.ReservedBatteryInfo
+                                        .builder()
+                                        .batterySerialId(battery.getId())
+                                        .serialNumber(battery.getSerialNumber())
+                                        .batteryModel(battery.getBattery().getName())
+                                        .chargePercent(battery.getChargePercent())
+                                        .stateOfHealth(battery.getStateOfHealth())
+                                        .totalCycleCount(battery.getTotalCycleCount())
+                                        .status(battery.getStatus().name())
+                                        .build();
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+
+                // Build response
+                com.evstation.batteryswap.dto.response.ReservationBatteriesResponse response = com.evstation.batteryswap.dto.response.ReservationBatteriesResponse
+                        .builder()
+                        .reservationId(reservation.getId())
+                        .username(reservation.getUser().getUsername())
+                        .vehicleVin(reservation.getVehicle().getVin())
+                        .stationName(reservation.getStation().getName())
+                        .status(reservation.getStatus().name())
+                        .quantity(reservation.getQuantity())
+                        .usedCount(reservation.getUsedCount())
+                        .reservedAt(reservation.getReservedAt())
+                        .expireAt(reservation.getExpireAt())
+                        .remainingMinutes(reservation.getRemainingMinutes())
+                        .batteries(batteries)
+                        .build();
+
+                return ResponseEntity.ok(java.util.Map.of(
+                        "hasReservation", true,
+                        "reservation", response));
         }
 }
