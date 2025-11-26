@@ -70,6 +70,34 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 Station station = stationRepository.findById(req.getStationId())
                                 .orElseThrow(() -> new RuntimeException("Station not found"));
 
+                // 🔍 KIỂM TRA RESERVATION (OPTIONAL) - Có thể có hoặc không
+                Optional<Reservation> reservationOpt = reservationRepository
+                                .findByUserIdAndVehicleIdAndStationIdAndStatus(
+                                                user.getId(),
+                                                vehicle.getId(),
+                                                station.getId(),
+                                                ReservationStatus.ACTIVE);
+
+                Reservation reservation = null;
+                if (reservationOpt.isPresent()) {
+                        reservation = reservationOpt.get();
+                        
+                        // Kiểm tra reservation còn hiệu lực
+                        if (!reservation.isActive()) {
+                                throw new RuntimeException("Your reservation has expired. Please create a new reservation.");
+                        }
+
+                        log.info("RESERVATION FOUND | reservationId={} | expiresAt={} | batteries=[{}]",
+                                        reservation.getId(),
+                                        reservation.getExpireAt(),
+                                        reservation.getItems().stream()
+                                                        .map(item -> item.getBatterySerial().getSerialNumber())
+                                                        .collect(Collectors.joining(", ")));
+                } else {
+                        log.info("NO RESERVATION | Walk-in swap | user={} | vehicle={} | station={}",
+                                        user.getUsername(), vehicle.getId(), station.getName());
+                }
+
                 // Đặt trạng thái tạm cho pin cũ (chờ staff xác nhận)
                 oldBattery.setStatus(BatteryStatus.PENDING_OUT);
                 batterySerialRepository.save(oldBattery);
@@ -80,6 +108,7 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                                 .vehicle(vehicle)
                                 .batterySerial(oldBattery)
                                 .station(station)
+                                .reservation(reservation) // 🔗 Link với reservation (có thể null)
                                 .startPercent(Optional.ofNullable(oldBattery.getChargePercent()).orElse(100.0))
                                 .timestamp(LocalDateTime.now())
                                 .status(SwapTransactionStatus.PENDING_CONFIRM)
@@ -88,8 +117,9 @@ public class SwapTransactionServiceImpl implements SwapTransactionService {
                 swapTransactionRepository.save(tx);
 
                 // Ghi log
-                log.info("SWAP REQUEST | user={} | vehicle={} | oldBattery={} | station={} | status=PENDING_CONFIRM",
-                                user.getUsername(), vehicle.getId(), oldBattery.getSerialNumber(), station.getName());
+                log.info("SWAP REQUEST | user={} | vehicle={} | oldBattery={} | station={} | reservationId={} | status=PENDING_CONFIRM",
+                                user.getUsername(), vehicle.getId(), oldBattery.getSerialNumber(), station.getName(), 
+                                reservation != null ? reservation.getId() : "NONE (walk-in)");
 
                 return SwapResponse.builder()
                                 .message("Swap request created. Waiting for staff to select battery and confirm at "

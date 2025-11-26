@@ -40,6 +40,11 @@ public class SwapTransaction {
     @JoinColumn(name = "station_id")
     private Station station;
 
+    // Reservation liên kết (nếu swap từ reservation)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reservation_id")
+    private Reservation reservation;
+
     // Thời điểm thực hiện
     private LocalDateTime timestamp = LocalDateTime.now();
     @Enumerated(EnumType.STRING)

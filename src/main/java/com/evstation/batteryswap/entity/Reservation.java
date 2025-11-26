@@ -78,6 +78,15 @@ public class Reservation {
     private Integer quantity;
 
     /**
+     * Số lượng pin đã swap thực tế
+     * Mỗi lần swap thành công sẽ tăng lên 1
+     * Khi usedCount == quantity → Mark reservation USED
+     */
+    @Column(name = "used_count", nullable = false, columnDefinition = "INTEGER DEFAULT 0")
+    @Builder.Default
+    private Integer usedCount = 0;
+
+    /**
      * Thời điểm đặt pin
      */
     @Column(name = "reserved_at", nullable = false)

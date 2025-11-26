@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -102,8 +103,8 @@ public class ReservationServiceImpl implements ReservationService {
         Station station = stationRepository.findById(request.getStationId())
                 .orElseThrow(() -> new RuntimeException("Station not found: " + request.getStationId()));
 
-        // ===== 7. FIND & LOCK BATTERIES =====
-        List<BatterySerial> batteries = findAndLockBatteries(request, station);
+        // ===== 7. FIND & LOCK BATTERIES (với SoH validation) =====
+        List<BatterySerial> batteries = findAndLockBatteries(request, station, subscription);
 
         if (batteries.size() < request.getQuantity()) {
             throw new RuntimeException(String.format(
@@ -158,73 +159,59 @@ public class ReservationServiceImpl implements ReservationService {
     /**
      * ========== TÌM VÀ LOCK BATTERIES ==========
      * 
-     * Logic:
-     * - Nếu user chọn pin cụ thể (batteryIds != null): Validate và lấy pin đó
-     * - Nếu không: Auto-select pin tốt nhất (charge >= 95%)
+     * Logic: User BẮT BUỘC phải chọn pin cụ thể
+     * ✅ VALIDATE SOH THEO PLAN RANGE
      */
-    private List<BatterySerial> findAndLockBatteries(ReservationRequest request, Station station) {
-        if (request.getBatteryIds() != null && !request.getBatteryIds().isEmpty()) {
-            // === USER CHỌN PIN CỤ THỂ ===
-            if (request.getBatteryIds().size() != request.getQuantity()) {
-                throw new RuntimeException("Battery IDs count must match quantity");
-            }
-
-            List<BatterySerial> batteries = batterySerialRepository.findAllById(request.getBatteryIds());
-
-            // Validate: Pin phải tồn tại, thuộc station, và AVAILABLE
-            for (BatterySerial battery : batteries) {
-                if (!battery.getStation().getId().equals(station.getId())) {
-                    throw new RuntimeException(String.format(
-                            "Battery %s does not belong to station %s",
-                            battery.getSerialNumber(), station.getName()
-                    ));
-                }
-                if (battery.getStatus() != BatteryStatus.AVAILABLE) {
-                    throw new RuntimeException(String.format(
-                            "Battery %s is not AVAILABLE (current status: %s)",
-                            battery.getSerialNumber(), battery.getStatus()
-                    ));
-                }
-            }
-
-            return batteries;
-
-        } else {
-            // === AUTO-SELECT PIN TỐT NHẤT ===
-            // Query: SELECT * FROM battery_serials
-            //        WHERE station_id = ? AND status = 'AVAILABLE' AND charge_percent >= 95
-            //        ORDER BY charge_percent DESC, state_of_health DESC
-            //        LIMIT quantity
-
-            List<BatterySerial> availableBatteries = batterySerialRepository
-                    .findByStation(station).stream()
-                    .filter(b -> b.getStatus() == BatteryStatus.AVAILABLE)
-                    .filter(b -> b.getChargePercent() != null && b.getChargePercent() >= 95.0)
-                    .sorted((b1, b2) -> {
-                        // Ưu tiên: chargePercent DESC, sau đó SoH DESC
-                        int chargeCompare = Double.compare(
-                                b2.getChargePercent() != null ? b2.getChargePercent() : 0,
-                                b1.getChargePercent() != null ? b1.getChargePercent() : 0
-                        );
-                        if (chargeCompare != 0) return chargeCompare;
-
-                        return Double.compare(
-                                b2.getStateOfHealth() != null ? b2.getStateOfHealth() : 0,
-                                b1.getStateOfHealth() != null ? b1.getStateOfHealth() : 0
-                        );
-                    })
-                    .limit(request.getQuantity())
-                    .collect(Collectors.toList());
-
-            log.info("AUTO-SELECTED BATTERIES | stationId={} | required={} | found={} | batteries={}",
-                    station.getId(), request.getQuantity(), availableBatteries.size(),
-                    availableBatteries.stream()
-                            .map(b -> String.format("%s(%.0f%%/%.0f%%SoH)",
-                                    b.getSerialNumber(), b.getChargePercent(), b.getStateOfHealth()))
-                            .collect(Collectors.toList()));
-
-            return availableBatteries;
+    private List<BatterySerial> findAndLockBatteries(ReservationRequest request, Station station, Subscription subscription) {
+        // User phải chọn pin cụ thể
+        if (request.getBatteryIds() == null || request.getBatteryIds().isEmpty()) {
+            throw new RuntimeException("You must specify battery IDs to reserve");
         }
+        
+        // Validate số lượng pin
+        if (request.getBatteryIds().size() != request.getQuantity()) {
+            throw new RuntimeException("Battery IDs count must match quantity");
+        }
+
+        // Lấy SoH range từ plan
+        Double minSoH = subscription.getPlan().getMinSoH();
+        Double maxSoH = subscription.getPlan().getMaxSoH();
+        boolean hasSoHRange = (minSoH != null && maxSoH != null);
+
+        List<BatterySerial> batteries = batterySerialRepository.findAllById(request.getBatteryIds());
+
+        // Validate: Pin phải tồn tại, thuộc station, AVAILABLE, và SoH hợp lệ
+        for (BatterySerial battery : batteries) {
+            if (!battery.getStation().getId().equals(station.getId())) {
+                throw new RuntimeException(String.format(
+                        "Battery %s does not belong to station %s",
+                        battery.getSerialNumber(), station.getName()
+                ));
+            }
+            if (battery.getStatus() != BatteryStatus.AVAILABLE) {
+                throw new RuntimeException(String.format(
+                        "Battery %s is not AVAILABLE (current status: %s)",
+                        battery.getSerialNumber(), battery.getStatus()
+                ));
+            }
+            
+            // ✅ VALIDATE SOH RANGE
+            if (hasSoHRange) {
+                Double batterySoH = Optional.ofNullable(battery.getStateOfHealth()).orElse(100.0);
+                if (batterySoH < minSoH || batterySoH > maxSoH) {
+                    throw new RuntimeException(String.format(
+                            "Battery %s (SoH: %.1f%%) is not allowed for your plan %s (allowed: %.1f%% - %.1f%%)",
+                            battery.getSerialNumber(), batterySoH, 
+                            subscription.getPlan().getName(), minSoH, maxSoH
+                    ));
+                }
+                log.info("RESERVATION SOH VALIDATED | battery={} | SoH={}% | plan={} | range=[{}%, {}%]",
+                        battery.getSerialNumber(), batterySoH, 
+                        subscription.getPlan().getName(), minSoH, maxSoH);
+            }
+        }
+
+        return batteries;
     }
 
     /**

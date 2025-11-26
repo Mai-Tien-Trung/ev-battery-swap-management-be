@@ -55,13 +55,42 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
                         SubscriptionStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active subscription found"));
 
-        // 3️⃣ Lấy pin mới theo ID cụ thể từ staff
+        // 3️⃣ Lấy reservation từ transaction (có thể null nếu walk-in)
+        Reservation reservation = tx.getReservation();
+
+        // 4️⃣ Lấy pin mới theo ID cụ thể từ staff
         BatterySerial newBattery = batterySerialRepository.findById(request.getNewBatterySerialId())
                 .orElseThrow(() -> new RuntimeException("Battery not found"));
 
-        // 4️⃣ Validate pin mới
-        if (newBattery.getStatus() != BatteryStatus.AVAILABLE) {
-            throw new RuntimeException("Battery is not available for swap");
+        // 5️⃣ NẾU CÓ RESERVATION → Validate pin mới phải trong danh sách đã đặt
+        if (reservation != null) {
+            boolean batteryInReservation = reservation.getItems().stream()
+                    .anyMatch(item -> item.getBatterySerial().getId().equals(newBattery.getId()));
+
+            if (!batteryInReservation) {
+                String reservedBatteries = reservation.getItems().stream()
+                        .map(item -> item.getBatterySerial().getSerialNumber())
+                        .collect(java.util.stream.Collectors.joining(", "));
+                throw new RuntimeException(String.format(
+                        "Battery %s is not in your reservation. Reserved batteries: [%s]",
+                        newBattery.getSerialNumber(), reservedBatteries));
+            }
+            
+            log.info("RESERVATION VALIDATION PASSED | reservationId={} | selectedBattery={}",
+                    reservation.getId(), newBattery.getSerialNumber());
+        } else {
+            log.info("WALK-IN SWAP | No reservation validation needed");
+        }
+
+        // 6️⃣ Validate pin mới
+        // Nếu có reservation: pin phải RESERVED
+        // Nếu walk-in: pin phải AVAILABLE
+        BatteryStatus expectedStatus = (reservation != null) ? BatteryStatus.RESERVED : BatteryStatus.AVAILABLE;
+        if (newBattery.getStatus() != expectedStatus) {
+            throw new RuntimeException(String.format(
+                    "Battery status is %s, expected %s for %s swap",
+                    newBattery.getStatus(), expectedStatus, 
+                    reservation != null ? "RESERVED" : "WALK-IN"));
         }
 
         if (!newBattery.getStation().getId().equals(station.getId())) {
@@ -241,6 +270,47 @@ public class SwapConfirmServiceImpl implements SwapConfirmService {
         tx.setStaff(staff);
         tx.setConfirmedAt(LocalDateTime.now());
         swapTransactionRepository.save(tx);
+
+        // 1️⃣1️⃣ NẾU CÓ RESERVATION → Tăng usedCount, chỉ mark USED khi swap đủ số lượng
+        if (reservation != null) {
+            // Tăng số lượng pin đã swap
+            int currentUsedCount = Optional.ofNullable(reservation.getUsedCount()).orElse(0);
+            reservation.setUsedCount(currentUsedCount + 1);
+            
+            log.info("RESERVATION SWAP PROGRESS | reservationId={} | usedCount={}/{} | battery={}",
+                    reservation.getId(), reservation.getUsedCount(), reservation.getQuantity(),
+                    newBattery.getSerialNumber());
+            
+            // Nếu đã swap đủ số lượng → Mark USED và release pin còn lại
+            if (reservation.getUsedCount() >= reservation.getQuantity()) {
+                reservation.setStatus(ReservationStatus.USED);
+                reservation.setUsedAt(LocalDateTime.now());
+                reservation.setSwapTransactionId(tx.getId());
+                
+                // Release tất cả pin RESERVED còn lại trong reservation
+                for (com.evstation.batteryswap.entity.ReservationItem item : reservation.getItems()) {
+                    BatterySerial battery = item.getBatterySerial();
+                    
+                    // Release pin nếu vẫn còn RESERVED (chưa được swap)
+                    if (battery.getStatus() == BatteryStatus.RESERVED) {
+                        battery.setStatus(BatteryStatus.AVAILABLE);
+                        batterySerialRepository.save(battery);
+                        log.info("BATTERY RELEASED | battery={} | RESERVED -> AVAILABLE (reservation completed)", 
+                                battery.getSerialNumber());
+                    }
+                }
+                
+                log.info("RESERVATION COMPLETED | reservationId={} | swappedAll={}/{} | status=USED",
+                        reservation.getId(), reservation.getUsedCount(), reservation.getQuantity());
+            } else {
+                log.info("RESERVATION PARTIAL | reservationId={} | remaining={} batteries",
+                        reservation.getId(), reservation.getQuantity() - reservation.getUsedCount());
+            }
+            
+            reservationRepository.save(reservation);
+        } else {
+            log.info("WALK-IN SWAP COMPLETED | No reservation to update");
+        }
 
         log.info(
                 "CONFIRM_SWAP | staff={} | txId={} | oldBattery={} (SoH: {}% -> {}%) -> station={} | newBattery={} (SoH: {}%) -> vehicle={}",

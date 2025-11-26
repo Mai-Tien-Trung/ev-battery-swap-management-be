@@ -47,12 +47,12 @@ public class ReservationRequest {
     private Integer quantity;
 
     /**
-     * Danh sách ID pin muốn đặt cụ thể (OPTIONAL)
+     * Danh sách ID pin muốn đặt cụ thể (BẮT BUỘC)
      * 
-     * - Nếu null/empty: Hệ thống tự động chọn pin tốt nhất (charge >= 95%)
-     * - Nếu có giá trị: Validate pin phải AVAILABLE và thuộc trạm
-     * 
-     * Size của list phải = quantity
+     * - User PHẢI chọn pin cụ thể để đặt lịch
+     * - Validate: Pin phải AVAILABLE, thuộc trạm, và SoH hợp lệ với plan
+     * - Size của list phải = quantity
      */
+    @NotNull(message = "Battery IDs are required")
     private List<Long> batteryIds;
 }
