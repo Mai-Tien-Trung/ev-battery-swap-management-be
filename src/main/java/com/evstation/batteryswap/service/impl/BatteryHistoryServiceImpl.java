@@ -28,7 +28,7 @@ public class BatteryHistoryServiceImpl implements BatteryHistoryService {
         @Transactional
         public void logEvent(BatterySerial battery, BatteryEventType eventType,
                         String oldValue, String newValue,
-                        Station station, Vehicle vehicle, User performedBy, String notes) {
+                        Station station, Vehicle vehicle, User performedBy, String notes, Double soh) {
 
                 BatteryHistory history = BatteryHistory.builder()
                                 .batterySerial(battery)
@@ -39,6 +39,7 @@ public class BatteryHistoryServiceImpl implements BatteryHistoryService {
                                 .vehicle(vehicle)
                                 .performedBy(performedBy)
                                 .notes(notes)
+                                .soh(soh)
                                 .createdAt(LocalDateTime.now())
                                 .build();
 
@@ -112,6 +113,7 @@ public class BatteryHistoryServiceImpl implements BatteryHistoryService {
                                                 ? history.getPerformedBy().getUsername()
                                                 : null)
                                 .notes(history.getNotes())
+                                .soh(history.getSoh())
                                 .createdAt(history.getCreatedAt())
                                 .build();
         }

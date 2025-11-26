@@ -93,7 +93,8 @@ public class BatteryTransferServiceImpl implements BatteryTransferService {
                                 toStation,
                                 null,
                                 admin,
-                                "Transferred by admin: " + request.getNotes());
+                                "Transferred by admin: " + request.getNotes(),
+                                updatedBattery.getStateOfHealth()); // Current SoH of battery
 
                 // 9. Build response
                 return BatteryTransferResponse.builder()
