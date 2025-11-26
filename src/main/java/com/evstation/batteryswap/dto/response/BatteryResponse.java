@@ -14,4 +14,6 @@ public class BatteryResponse {
     private BatteryStatus status;
     private Long stationId;
     private String stationName;
+    private Double stateOfHealth;
+    private Integer swapCount;
 }

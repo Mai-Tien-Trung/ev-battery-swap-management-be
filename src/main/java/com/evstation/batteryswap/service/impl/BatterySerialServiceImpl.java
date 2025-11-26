@@ -39,6 +39,8 @@ public class BatterySerialServiceImpl implements BatterySerialService {
                 .status(serial.getStatus())
                 .stationId(serial.getStation() != null ? serial.getStation().getId() : null)
                 .stationName(serial.getStation() != null ? serial.getStation().getName() : null)
+                .stateOfHealth(serial.getStateOfHealth())
+                .swapCount(serial.getSwapCount())
                 .build();
     }
 
