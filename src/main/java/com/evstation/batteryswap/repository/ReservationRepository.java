@@ -142,4 +142,19 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * @return Số lượng reservations
      */
     long countByUserIdAndStatus(Long userId, ReservationStatus status);
+
+    /**
+     * 📊 REPUTATION: Lấy reservations trong khoảng thời gian
+     * Dùng để tính uy tín user (đếm CANCELLED, EXPIRED trong tháng)
+     * 
+     * @param userId ID của user
+     * @param startDate Ngày bắt đầu (đầu tháng)
+     * @param endDate Ngày kết thúc (cuối tháng)
+     * @return List<Reservation> trong khoảng thời gian
+     */
+    List<Reservation> findByUserIdAndReservedAtBetween(
+        Long userId, 
+        LocalDateTime startDate, 
+        LocalDateTime endDate
+    );
 }

@@ -38,11 +38,13 @@ public class ReservationServiceImpl implements ReservationService {
     private final StationRepository stationRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final BatterySerialRepository batterySerialRepository;
+    private final com.evstation.batteryswap.service.ReputationService reputationService;
 
     /**
      * ========== TẠO RESERVATION ==========
      * 
      * Luồng xử lý:
+     * 0. ✅ CHECK UY TÍN (mới thêm)
      * 1. Validate user, vehicle, subscription
      * 2. Check không có reservation ACTIVE cho vehicle này
      * 3. Validate quantity <= plan.maxBatteries
@@ -56,6 +58,9 @@ public class ReservationServiceImpl implements ReservationService {
     public ReservationResponse createReservation(Long userId, ReservationRequest request) {
         log.info("CREATE RESERVATION | userId={} | vehicleId={} | stationId={} | quantity={}",
                 userId, request.getVehicleId(), request.getStationId(), request.getQuantity());
+
+        // ===== 0. CHECK UY TÍN - BƯỚC MỚI =====
+        reputationService.validateReputationForReservation(userId);
 
         // ===== 1. VALIDATE USER =====
         User user = userRepository.findById(userId)
