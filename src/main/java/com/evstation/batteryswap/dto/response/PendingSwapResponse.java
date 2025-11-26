@@ -11,6 +11,7 @@ public class PendingSwapResponse {
     private Long id;
     private String username;
     private Long vehicleId;
+    private String vehicleVin; // Mã VIN của xe
     private String stationName;
     private String batterySerialNumber; // Pin cũ đang được trả về
 
