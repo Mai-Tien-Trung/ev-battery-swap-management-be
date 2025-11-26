@@ -157,4 +157,37 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
         LocalDateTime startDate, 
         LocalDateTime endDate
     );
+
+    /**
+     * 📍 STAFF: Lấy tất cả reservations tại station
+     * Dùng để staff xem danh sách lịch hẹn tại trạm của mình
+     * 
+     * @param stationId ID của station
+     * @return List<Reservation> sắp xếp theo thời gian mới nhất
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "LEFT JOIN FETCH r.items i " +
+           "LEFT JOIN FETCH i.batterySerial " +
+           "WHERE r.station.id = :stationId " +
+           "ORDER BY r.reservedAt DESC")
+    List<Reservation> findByStationIdOrderByReservedAtDesc(@Param("stationId") Long stationId);
+
+    /**
+     * 📍 STAFF: Lấy reservations tại station theo status
+     * Lọc theo status (ACTIVE, USED, EXPIRED, CANCELLED)
+     * 
+     * @param stationId ID của station
+     * @param status Status filter
+     * @return List<Reservation>
+     */
+    @Query("SELECT r FROM Reservation r " +
+           "LEFT JOIN FETCH r.items i " +
+           "LEFT JOIN FETCH i.batterySerial " +
+           "WHERE r.station.id = :stationId " +
+           "AND r.status = :status " +
+           "ORDER BY r.reservedAt DESC")
+    List<Reservation> findByStationIdAndStatusOrderByReservedAtDesc(
+        @Param("stationId") Long stationId,
+        @Param("status") ReservationStatus status
+    );
 }

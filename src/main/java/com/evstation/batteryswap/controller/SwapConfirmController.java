@@ -302,4 +302,92 @@ public class SwapConfirmController {
                         "hasReservation", true,
                         "reservation", response));
         }
+
+        /**
+         * 📅 Lấy tất cả reservations tại trạm của staff
+         * Staff sẽ thấy danh sách lịch hẹn tại trạm được assign
+         * 
+         * @param status Optional - lọc theo status (ACTIVE, USED, EXPIRED, CANCELLED)
+         * @return Danh sách reservations tại trạm
+         */
+        @GetMapping("/reservations")
+        public ResponseEntity<List<com.evstation.batteryswap.dto.response.ReservationBatteriesResponse>> getStationReservations(
+                @RequestParam(required = false) String status,
+                @AuthenticationPrincipal CustomUserDetails staff) {
+
+                // Get staff user and verify assigned station
+                com.evstation.batteryswap.entity.User staffUser = userRepository.findById(staff.getId())
+                        .orElseThrow(() -> new RuntimeException("Staff not found"));
+
+                com.evstation.batteryswap.entity.Station assignedStation = staffUser.getAssignedStation();
+                if (assignedStation == null) {
+                        throw new RuntimeException("Staff is not assigned to any station");
+                }
+
+                // Get reservations from station
+                List<com.evstation.batteryswap.entity.Reservation> reservations;
+                
+                if (status != null && !status.isEmpty()) {
+                        // Filter by status
+                        com.evstation.batteryswap.enums.ReservationStatus reservationStatus;
+                        try {
+                                reservationStatus = com.evstation.batteryswap.enums.ReservationStatus.valueOf(status.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                                throw new RuntimeException("Invalid status. Valid values: ACTIVE, USED, EXPIRED, CANCELLED");
+                        }
+                        reservations = reservationRepository.findByStationIdAndStatusOrderByReservedAtDesc(
+                                assignedStation.getId(), reservationStatus);
+                } else {
+                        // Get all reservations
+                        reservations = reservationRepository.findByStationIdOrderByReservedAtDesc(
+                                assignedStation.getId());
+                }
+
+                // Map to response
+                List<com.evstation.batteryswap.dto.response.ReservationBatteriesResponse> responses = reservations
+                        .stream()
+                        .map(reservation -> {
+                                // Map reservation items to battery info
+                                List<com.evstation.batteryswap.dto.response.ReservationBatteriesResponse.ReservedBatteryInfo> batteries = reservation
+                                        .getItems()
+                                        .stream()
+                                        .map(item -> {
+                                                com.evstation.batteryswap.entity.BatterySerial battery = item
+                                                        .getBatterySerial();
+                                                return com.evstation.batteryswap.dto.response.ReservationBatteriesResponse.ReservedBatteryInfo
+                                                        .builder()
+                                                        .batterySerialId(battery.getId())
+                                                        .serialNumber(battery.getSerialNumber())
+                                                        .batteryModel(battery.getBattery().getName())
+                                                        .chargePercent(battery.getChargePercent())
+                                                        .stateOfHealth(battery.getStateOfHealth())
+                                                        .totalCycleCount(battery.getTotalCycleCount())
+                                                        .status(battery.getStatus().name())
+                                                        .build();
+                                        })
+                                        .collect(java.util.stream.Collectors.toList());
+
+                                return com.evstation.batteryswap.dto.response.ReservationBatteriesResponse
+                                        .builder()
+                                        .reservationId(reservation.getId())
+                                        .username(reservation.getUser().getUsername())
+                                        .vehicleVin(reservation.getVehicle().getVin())
+                                        .stationName(reservation.getStation().getName())
+                                        .status(reservation.getStatus().name())
+                                        .quantity(reservation.getQuantity())
+                                        .usedCount(reservation.getUsedCount())
+                                        .reservedAt(reservation.getReservedAt())
+                                        .expireAt(reservation.getExpireAt())
+                                        .remainingMinutes(reservation.getRemainingMinutes())
+                                        .batteries(batteries)
+                                        .build();
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+
+                if (responses.isEmpty()) {
+                        return ResponseEntity.noContent().build();
+                }
+
+                return ResponseEntity.ok(responses);
+        }
 }
