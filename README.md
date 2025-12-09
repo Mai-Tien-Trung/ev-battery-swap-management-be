@@ -1,6 +1,4 @@
-Tuyệt vời\! Đây là bản dịch tiếng Anh của file `README.md` cho dự án của bạn:
 
------
 
 # 🔋 EV Battery Swap Station Management System (Backend)
 
@@ -237,4 +235,4 @@ All APIs are protected by JWT and can be accessed via Swagger UI.
   * **Reputation System Details** [REPUTATION\_SYSTEM\_GUIDE.md]
   * **Tiered Pricing Calculation** [TIERED\_PRICING\_CALCULATION.md]
 
------
+
