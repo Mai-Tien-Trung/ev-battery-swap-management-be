@@ -1,12 +1,12 @@
 
 
-# 🔋 EV Battery Swap Station Management System (Backend)
+#  EV Battery Swap Station Management System (Backend)
 
-## 📝 Project Description
+##  Project Description
 
 This project is a comprehensive backend system for managing Electric Vehicle (EV) Battery Swap Stations. The system handles complex processes including battery lifecycle management, swap transactions, a subscription package system, tiered overage billing, VNPay payment integration, battery reservation functionality, and user reputation management.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Category | Technology | Details |
 | :--- | :--- | :--- |
@@ -17,7 +17,7 @@ This project is a comprehensive backend system for managing Electric Vehicle (EV
 | **Utilities** | Lombok, Geodesy | Reduces boilerplate code, calculates distance/geolocation |
 | **Docs** | Swagger/OpenAPI (springdoc-openapi) | Automatic API documentation |
 
-## 💡 Core Features
+##  Core Features
 
 The system supports the following main functionalities:
 
@@ -48,7 +48,7 @@ The system supports the following main functionalities:
   * **User Roles:** Supports three roles (`USER`, `STAFF`, `ADMIN`) with varying access privileges (`@PreAuthorize`).
   * **Staff Assignment:** Assigns Staff members to a specific station to manage inventory and confirm swaps.
 
-## 🚀 Setup and Launch
+##  Setup and Launch
 
 ### 1\. Prerequisites
 
@@ -95,13 +95,13 @@ Tuyệt vời\! Đây là bản dịch tiếng Anh của file `README.md` cho d�
 
 -----
 
-# 🔋 EV Battery Swap Station Management System (Backend)
+#  EV Battery Swap Station Management System (Backend)
 
-## 📝 Project Description
+##  Project Description
 
 This project is a comprehensive backend system for managing Electric Vehicle (EV) Battery Swap Stations. The system handles complex processes including battery lifecycle management, swap transactions, a subscription package system, tiered overage billing, VNPay payment integration, battery reservation functionality, and user reputation management.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Category | Technology | Details |
 | :--- | :--- | :--- |
@@ -112,7 +112,7 @@ This project is a comprehensive backend system for managing Electric Vehicle (EV
 | **Utilities** | Lombok, Geodesy | Reduces boilerplate code, calculates distance/geolocation |
 | **Docs** | Swagger/OpenAPI (springdoc-openapi) | Automatic API documentation |
 
-## 💡 Core Features
+##  Core Features
 
 The system supports the following main functionalities:
 
@@ -143,7 +143,7 @@ The system supports the following main functionalities:
   * **User Roles:** Supports three roles (`USER`, `STAFF`, `ADMIN`) with varying access privileges (`@PreAuthorize`).
   * **Staff Assignment:** Assigns Staff members to a specific station to manage inventory and confirm swaps.
 
-## 🚀 Setup and Launch
+##  Setup and Launch
 
 ### 1\. Prerequisites
 
@@ -227,7 +227,7 @@ All APIs are protected by JWT and can be accessed via Swagger UI.
 | `/api/payment/vnpay-return` | `GET` | `PUBLIC` | Callback/webhook to process VNPay result (updates Invoice/Subscription) |
 
 
-## 📚 Reference Documentation
+##  Reference Documentation
 
   * **VNPAY Integration Guide** [VNPAY\_INTEGRATION\_GUIDE.md]
   * **Subscription Renewal & Payment Flow** [SUBSCRIPTION\_RENEWAL\_PAYMENT.md]
